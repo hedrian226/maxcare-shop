@@ -517,11 +517,16 @@
   .admin-app{height:100%;display:flex;flex-direction:column;min-height:0;}
   .admin-topbar{
     flex:none;padding:18px 64px 18px 24px;border-bottom:1px solid var(--line);
-    display:flex;align-items:center;justify-content:space-between;gap:18px;background:#fff;
+    display:flex;align-items:center;background:#fff;
   }
   .admin-topbar h2{font-size:1.55rem;}
   .admin-topbar p{margin:3px 0 0;color:var(--muted);font-size:.78rem;}
-  .admin-top-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .admin-bottombar{
+    flex:none;display:flex;gap:10px;flex-wrap:wrap;
+    padding:14px 24px calc(14px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--line);background:#fff;
+  }
+  .admin-bottombar .btn{flex:1;min-width:120px;justify-content:center;}
   .admin-body{display:grid;grid-template-columns:360px minmax(0,1fr);flex:1;min-height:0;}
   .admin-sidebar{padding:22px;border-right:1px solid var(--line);overflow:auto;background:#FFF9FB;}
   .admin-main{padding:22px;overflow:auto;background:#fff;}
@@ -608,8 +613,8 @@
     .admin-sidebar,.admin-main{overflow:visible;border:0;}
     .admin-sidebar{border-bottom:1px solid var(--line);}
     .admin-app{overflow:hidden;}
-    .admin-topbar{padding:16px 60px 16px 18px;flex-wrap:wrap;row-gap:12px;}
-    .admin-top-actions{width:100%;justify-content:flex-start;}
+    .admin-topbar{padding:16px 60px 16px 18px;}
+    .admin-bottombar{padding:12px 18px calc(12px + env(safe-area-inset-bottom));}
     .product-dialog{width:calc(100vw - 20px);}
     .product-dialog-grid{grid-template-columns:1fr;max-height:calc(100dvh - 20px);overflow:auto;}
     .product-dialog-media{min-height:270px;padding:38px;border-radius:25px 25px 0 0;}
@@ -651,7 +656,8 @@
     .float-wa{right:max(15px,env(safe-area-inset-right));bottom:max(15px,env(safe-area-inset-bottom));width:54px;height:54px;}
     .form-grid{grid-template-columns:1fr;}
     .form-field.full{grid-column:auto;}
-    .admin-top-actions .btn{padding-inline:10px;}
+    .admin-bottombar{flex-direction:column;padding:10px 16px calc(10px + env(safe-area-inset-bottom));}
+    .admin-bottombar .btn{width:100%;min-width:0;min-height:46px;}
     .admin-sidebar,.admin-main{padding:16px;}
     .admin-product{grid-template-columns:58px minmax(0,1fr);}
     .admin-thumb{width:58px;height:58px;}
@@ -1055,12 +1061,6 @@
           <h2>Catalog manager</h2>
           <p>Changes are saved securely to Supabase and sync across devices.</p>
         </div>
-        <div class="admin-top-actions">
-          <button class="btn ghost small" id="export-data" type="button">Export</button>
-          <button class="btn ghost small" id="import-data-button" type="button">Import</button>
-          <input id="import-data" type="file" accept="application/json,.json" hidden>
-          <button class="btn small" id="admin-signout" type="button">Sign out</button>
-        </div>
       </header>
 
       <div class="admin-body">
@@ -1170,6 +1170,13 @@
 
         </div>
       </div>
+
+      <footer class="admin-bottombar">
+        <button class="btn ghost small" id="export-data" type="button">Export</button>
+        <button class="btn ghost small" id="import-data-button" type="button">Import</button>
+        <input id="import-data" type="file" accept="application/json,.json" hidden>
+        <button class="btn small" id="admin-signout" type="button">Sign out</button>
+      </footer>
     </section>
   </div>
 </dialog>
