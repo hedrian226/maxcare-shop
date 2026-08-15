@@ -2600,14 +2600,23 @@
       }
     }
 
+    function promiseWithTimeout(promise, milliseconds, message){
+      let timer;
+      const timeout = new Promise(function(_, reject){
+        timer = window.setTimeout(function(){ reject(new Error(message || 'The upload took too long.')); }, milliseconds);
+      });
+      return Promise.race([promise, timeout]).finally(function(){ window.clearTimeout(timer); });
+    }
+
     async function uploadProductImage(productId, preparedDataUrl){
       const blob = dataUrlToBlob(preparedDataUrl);
       const path = 'products/' + productId + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '.jpg';
-      const result = await supabaseClient.storage.from(PRODUCT_IMAGE_BUCKET).upload(path, blob, {
-        contentType: 'image/jpeg',
+      const uploadPromise = supabaseClient.storage.from(PRODUCT_IMAGE_BUCKET).upload(path, blob, {
+        contentType: blob.type || 'image/jpeg',
         cacheControl: '31536000',
         upsert: false
       });
+      const result = await promiseWithTimeout(uploadPromise, 60000, 'This photo took too long to upload. Please check your connection and try again.');
       if (result.error) throw result.error;
       const publicResult = supabaseClient.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(path);
       const publicUrl = publicResult && publicResult.data && publicResult.data.publicUrl;
@@ -2867,7 +2876,7 @@
     productForm.addEventListener('submit', async function(event){
       event.preventDefault();
       if (imageProcessing) {
-        showToast('Wait for the product image to finish processing.', true);
+        showToast('Wait for the product photos to finish preparing.', true);
         return;
       }
       const name = cleanText(productNameInput.value, '', 120);
@@ -2886,51 +2895,32 @@
       const productId = existing ? existing.id : createId();
       const previousImage = existing ? existing.image : '';
       const previousGallery = existing ? cloneValue(existing.gallery || []) : [];
-      let finalImage = safeImageSource(imageUrl || editingImage || PLACEHOLDER_IMAGE);
-      let newlyUploadedUrl = '';
-      const newlyUploadedGalleryUrls = [];
+      const preparedCover = uploadedImage;
+      const preparedExtras = pendingGalleryImages.slice();
+      const now = new Date().toISOString();
+      const product = {
+        id: productId,
+        name: name,
+        whatsappName: cleanText(productWhatsappNameInput.value, name, 120),
+        category: productCategoryInput.value || state.categories[0] || 'Other',
+        description: description,
+        image: safeImageSource(imageUrl || editingImage || PLACEHOLDER_IMAGE),
+        alt: name,
+        gallery: cloneValue(editingGallery),
+        variants: parseVariantInput(productVariantsInput.value),
+        availability: productAvailabilityInput.value,
+        enabled: productEnabledInput.checked,
+        featured: productFeaturedInput.checked,
+        isNew: productNewInput.checked,
+        order: existing ? existing.order : state.products.length,
+        createdAt: existing ? existing.createdAt : now,
+        updatedAt: now
+      };
+
       saveProductButton.disabled = true;
-
       try {
-        if (uploadedImage) {
-          saveProductButton.textContent = 'Uploading image...';
-          newlyUploadedUrl = await uploadProductImage(productId, uploadedImage);
-          finalImage = newlyUploadedUrl;
-        }
-
-        const uploadedGalleryItems = [];
-        if (pendingGalleryImages.length) {
-          if (!galleryTableAvailable) await refreshGalleryTableAvailability();
-          if (!galleryTableAvailable) throw new Error('The extra photos are ready, but Supabase cannot access the product_images table. Run the gallery SQL once, then refresh the site and try again.');
-          for (let i = 0; i < pendingGalleryImages.length; i += 1) {
-            saveProductButton.textContent = 'Uploading photo ' + (i + 2) + ' / ' + (pendingGalleryImages.length + 1) + '...';
-            const galleryUrl = await uploadProductImage(productId, pendingGalleryImages[i].dataUrl);
-            newlyUploadedGalleryUrls.push(galleryUrl);
-            uploadedGalleryItems.push({id:createId(), url:galleryUrl, sortOrder:editingGallery.length + i});
-          }
-        }
-        const finalGallery = editingGallery.concat(uploadedGalleryItems).map(function(item,index){ item.sortOrder=index; return item; });
-
-        const now = new Date().toISOString();
-        const product = {
-          id: productId,
-          name: name,
-          whatsappName: cleanText(productWhatsappNameInput.value, name, 120),
-          category: productCategoryInput.value || state.categories[0] || 'Other',
-          description: description,
-          image: finalImage,
-          alt: name,
-          gallery: finalGallery,
-          variants: parseVariantInput(productVariantsInput.value),
-          availability: productAvailabilityInput.value,
-          enabled: productEnabledInput.checked,
-          featured: productFeaturedInput.checked,
-          isNew: productNewInput.checked,
-          order: existing ? existing.order : state.products.length,
-          createdAt: existing ? existing.createdAt : now,
-          updatedAt: now
-        };
-
+        // Save the product record first. This prevents a long multi-photo upload
+        // from making it look as if the product was never added.
         if (existing) {
           const index = state.products.findIndex(function(item){ return item.id === existing.id; });
           state.products[index] = product;
@@ -2938,23 +2928,58 @@
           state.products.push(product);
         }
         if (state.categories.indexOf(product.category) < 0) state.categories.push(product.category);
+        renderProducts();
+        renderAdmin();
+        saveProductButton.textContent = 'Saving product...';
+        await syncCatalogToSupabase();
 
-        saveProductButton.textContent = 'Saving...';
-        await commit(existing ? 'Product updated.' : 'Product added.');
-        resetProductForm();
+        const preparedPhotos = [];
+        if (preparedCover) preparedPhotos.push({cover:true, dataUrl:preparedCover, fileName:'Cover photo'});
+        preparedExtras.forEach(function(item){ preparedPhotos.push({cover:false, dataUrl:item.dataUrl, fileName:item.fileName}); });
 
-        if (newlyUploadedUrl && previousImage && previousImage !== newlyUploadedUrl) {
-          await removeStoredImage(previousImage);
+        if (preparedPhotos.length > 1) {
+          if (!galleryTableAvailable) await refreshGalleryTableAvailability();
+          if (!galleryTableAvailable) throw new Error('The product was saved, but extra photos need the product_images table in Supabase. Run the gallery SQL once, refresh, then edit this product and upload the photos again.');
         }
-        const keptGalleryUrls = new Set(finalGallery.map(function(item){ return item.url; }));
+
+        const uploaded = [];
+        for (let i = 0; i < preparedPhotos.length; i += 1) {
+          saveProductButton.textContent = 'Uploading photo ' + (i + 1) + ' / ' + preparedPhotos.length + '...';
+          showToast('Uploading photo ' + (i + 1) + ' of ' + preparedPhotos.length + '...');
+          const url = await uploadProductImage(productId, preparedPhotos[i].dataUrl);
+          uploaded.push({cover:preparedPhotos[i].cover, url:url});
+        }
+
+        if (uploaded.length) {
+          const coverUpload = uploaded.find(function(item){ return item.cover; });
+          if (coverUpload) product.image = coverUpload.url;
+          const newGallery = uploaded.filter(function(item){ return !item.cover; }).map(function(item, index){
+            return {id:createId(), url:item.url, sortOrder:product.gallery.length + index};
+          });
+          product.gallery = product.gallery.concat(newGallery).map(function(item,index){ item.sortOrder=index; return item; });
+          product.updatedAt = new Date().toISOString();
+          saveProductButton.textContent = 'Finishing...';
+          await syncCatalogToSupabase();
+        }
+
+        // Clean up images that were replaced only after the new data is safely saved.
+        if (uploaded.length && previousImage && product.image !== previousImage) await removeStoredImage(previousImage);
+        const keptGalleryUrls = new Set((product.gallery || []).map(function(item){ return item.url; }));
         for (const oldItem of previousGallery) {
           if (!keptGalleryUrls.has(oldItem.url)) await removeStoredImage(oldItem.url);
         }
+
+        renderProducts();
+        renderAdmin();
+        showToast(preparedPhotos.length > 1 ? (preparedPhotos.length + ' photos uploaded. Product saved.') : 'Product saved.');
+        resetProductForm();
       } catch (error) {
         console.error(error);
-        if (newlyUploadedUrl) await removeStoredImage(newlyUploadedUrl);
-        for (const galleryUrl of newlyUploadedGalleryUrls) await removeStoredImage(galleryUrl);
-        showToast(describeError(error, 'Could not save the product.'), true);
+        // Keep the product record if the photo upload fails, so the user can edit
+        // it and retry instead of losing all entered information.
+        renderProducts();
+        renderAdmin();
+        showToast(describeError(error, 'The product was saved, but one or more photos could not upload. Edit the product and try again.'), true);
       } finally {
         saveProductButton.disabled = false;
         if (productIdInput.value) saveProductButton.textContent = 'Save changes';
