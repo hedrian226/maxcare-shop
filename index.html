@@ -608,13 +608,14 @@
   }
   @media (max-width:760px){
     .admin-dialog{width:100vw;height:100dvh;inset:0;margin:0;}
-    .admin-dialog .dialog-shell{border-radius:0;border:0;}
-    .admin-body{display:block;overflow:auto;}
+    .admin-dialog .dialog-shell{border-radius:0;border:0;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    .admin-app{height:auto;min-height:100%;overflow:visible;}
+    .admin-body{display:block;overflow:visible;flex:none;}
     .admin-sidebar,.admin-main{overflow:visible;border:0;}
     .admin-sidebar{border-bottom:1px solid var(--line);}
-    .admin-app{overflow:hidden;}
-    .admin-topbar{padding:16px 60px 16px 18px;}
-    .admin-bottombar{padding:12px 18px calc(12px + env(safe-area-inset-bottom));}
+    .admin-topbar{padding:16px 60px 16px 18px;flex:none;}
+    .admin-dialog .dialog-close{position:fixed;}
+    .admin-bottombar{padding:12px 18px calc(12px + env(safe-area-inset-bottom));flex:none;}
     .product-dialog{width:calc(100vw - 20px);}
     .product-dialog-grid{grid-template-columns:1fr;max-height:calc(100dvh - 20px);overflow:auto;}
     .product-dialog-media{min-height:270px;padding:38px;border-radius:25px 25px 0 0;}
