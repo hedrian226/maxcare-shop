@@ -1455,6 +1455,9 @@
         description: product.description,
         image: product.image,
         alt: product.alt || product.name,
+        gallery: (product.gallery || []).map(function(item, index){
+          return {id:item.id || createId(), url:item.url, sortOrder:index};
+        }),
         variants: product.variants || [],
         availability: product.availability,
         enabled: product.enabled,
@@ -1470,11 +1473,10 @@
       const fallback = makeDefaultState();
       let query = supabaseClient.from('products').select('*').order('sort_order', {ascending:true});
       if (!includeHidden) query = query.eq('enabled', true);
-      const [productsResult, categoriesResult, settingsResult, galleryResult] = await Promise.all([
+      const [productsResult, categoriesResult, settingsResult] = await Promise.all([
         query,
         supabaseClient.from('categories').select('name').order('name', {ascending:true}),
-        supabaseClient.from('site_settings').select('wa_number,generic_message,order_template').eq('id', 1).maybeSingle(),
-        supabaseClient.from('product_images').select('id,product_id,image_url,sort_order').order('sort_order', {ascending:true})
+        supabaseClient.from('site_settings').select('wa_number,generic_message,order_template').eq('id', 1).maybeSingle()
       ]);
 
       if (productsResult.error) throw productsResult.error;
@@ -1482,16 +1484,8 @@
 
       const rows = productsResult.data || [];
       // Supabase is the source of truth. An empty products table must stay empty.
-      const galleryRows = galleryResult && !galleryResult.error ? (galleryResult.data || []) : [];
-      galleryTableAvailable = !(galleryResult && galleryResult.error);
-      if (!galleryTableAvailable && galleryResult && galleryResult.error) console.warn('Collection gallery table is not ready:', galleryResult.error);
-      const galleryByProduct = new Map();
-      galleryRows.forEach(function(row){
-        if (!galleryByProduct.has(row.product_id)) galleryByProduct.set(row.product_id, []);
-        galleryByProduct.get(row.product_id).push({id:row.id,url:row.image_url,sortOrder:row.sort_order});
-      });
+      // Multi-photo URLs are stored directly in products.gallery (JSONB).
       const products = rows.map(function(row, index){
-        row.gallery = galleryByProduct.get(row.id) || [];
         return productFromRow(row, index);
       });
       let categories = uniqueCategories((categoriesResult.data || []).map(function(row){ return row.name; }));
@@ -1550,26 +1544,7 @@
         if (removed.error) throw removed.error;
       }
 
-      if (galleryTableAvailable) {
-        const galleryRows = [];
-        state.products.forEach(function(product){
-          (product.gallery || []).forEach(function(item, index){
-            galleryRows.push({id:item.id, product_id:product.id, image_url:item.url, sort_order:index});
-          });
-        });
-        if (galleryRows.length) {
-          const upsertGallery = await supabaseClient.from('product_images').upsert(galleryRows, {onConflict:'id'});
-          if (upsertGallery.error) throw upsertGallery.error;
-        }
-        const existingGallery = await supabaseClient.from('product_images').select('id');
-        if (existingGallery.error) throw existingGallery.error;
-        const keepGalleryIds = new Set(galleryRows.map(function(row){ return row.id; }));
-        const removeGalleryIds = (existingGallery.data || []).map(function(row){ return row.id; }).filter(function(id){ return !keepGalleryIds.has(id); });
-        if (removeGalleryIds.length) {
-          const removedGallery = await supabaseClient.from('product_images').delete().in('id', removeGalleryIds);
-          if (removedGallery.error) throw removedGallery.error;
-        }
-      }
+
 
       const existingCategories = await supabaseClient.from('categories').select('id,name');
       if (existingCategories.error) throw existingCategories.error;
@@ -1711,17 +1686,7 @@
       return fallback || 'Something went wrong.';
     }
 
-    async function refreshGalleryTableAvailability(){
-      try {
-        const probe = await supabaseClient.from('product_images').select('id').limit(1);
-        galleryTableAvailable = !probe.error;
-        if (probe.error) console.warn('product_images availability check failed:', probe.error);
-      } catch (error) {
-        galleryTableAvailable = false;
-        console.warn('product_images availability check failed:', error);
-      }
-      return galleryTableAvailable;
-    }
+    async function refreshGalleryTableAvailability(){ galleryTableAvailable = true; return true; }
 
     function waLink(message){
       const number = String(state.settings.waNumber || DEFAULT_SETTINGS.waNumber).replace(/\D/g, '');
@@ -2952,18 +2917,9 @@
           renderAdmin();
         }
 
-        // Extra photos use product_images. Re-check the table only AFTER the cover
-        // is safely uploaded and saved, so a gallery setup issue cannot leave a pink placeholder.
+        // Upload every remaining photo and store its URL directly on the product row.
+        // This avoids a second database table/RLS path that was causing only the cover to persist.
         if (preparedExtras.length) {
-          await refreshGalleryTableAvailability();
-          if (!galleryTableAvailable) {
-            throw new Error('The cover photo was saved, but the extra photos cannot be saved because the product_images table is not available to this admin account. Run the Maxcare product_images SQL in Supabase, then refresh and edit this product to add the remaining photos.');
-          }
-
-          // Save EACH extra photo to product_images immediately after it uploads.
-          // This avoids waiting until the end of the whole batch and prevents the
-          // gallery from being lost if a later photo fails.
-          const newlyUploadedGallery = [];
           for (let i = 0; i < preparedExtras.length; i += 1) {
             uploadNumber += 1;
             saveProductButton.textContent = 'Uploading photo ' + uploadNumber + ' / ' + preparedPhotos.length + '...';
@@ -2973,24 +2929,13 @@
             const galleryItem = {
               id: createId(),
               url: url,
-              sortOrder: product.gallery.length + newlyUploadedGallery.length
+              sortOrder: product.gallery.length
             };
-
-            const insertResult = await supabaseClient.from('product_images').insert({
-              id: galleryItem.id,
-              product_id: productId,
-              image_url: galleryItem.url,
-              sort_order: galleryItem.sortOrder
-            });
-
-            if (insertResult.error) {
-              await removeStoredImage(url);
-              throw new Error('Photo ' + uploadNumber + ' uploaded to Storage but could not be linked to the product: ' + insertResult.error.message);
-            }
-
-            newlyUploadedGallery.push(galleryItem);
             product.gallery = product.gallery.concat([galleryItem]).map(function(item,index){ item.sortOrder=index; return item; });
             product.updatedAt = new Date().toISOString();
+
+            // Save after each successful upload so partial progress is never lost.
+            await syncCatalogToSupabase();
             renderProducts();
             renderAdmin();
           }
