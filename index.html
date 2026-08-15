@@ -1428,7 +1428,9 @@
       if (categoriesResult.error) throw categoriesResult.error;
 
       const rows = productsResult.data || [];
-      const products = rows.length ? rows.map(productFromRow) : fallback.products;
+      // Supabase is the source of truth. An empty products table must stay empty
+      // instead of restoring the built-in seed/demo products after deletion.
+      const products = rows.map(productFromRow);
       let categories = uniqueCategories((categoriesResult.data || []).map(function(row){ return row.name; }));
       products.forEach(function(product){
         if (!categories.some(function(category){ return category.toLowerCase() === product.category.toLowerCase(); })) {
@@ -2484,8 +2486,7 @@
           throw new Error('This account is not authorized as a shop administrator.');
         }
 
-        const wasEmpty = await loadStateFromSupabase(true);
-        if (wasEmpty) await syncCatalogToSupabase();
+        await loadStateFromSupabase(true);
         adminLoginView.hidden = true;
         adminApp.hidden = false;
         adminLoginForm.reset();
