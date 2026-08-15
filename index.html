@@ -1597,6 +1597,20 @@
       toastTimer = window.setTimeout(function(){ toast.classList.remove('show'); }, 3200);
     }
 
+    function describeError(error, fallback){
+      if (!error) return fallback || 'Something went wrong.';
+      if (typeof error === 'string') return error;
+      if (error.message && typeof error.message === 'string') return error.message;
+      if (error.error_description) return error.error_description;
+      if (error.error && typeof error.error === 'string') return error.error;
+      if (error.details && typeof error.details === 'string') return error.details;
+      try {
+        const asText = JSON.stringify(error);
+        if (asText && asText !== '{}') return asText;
+      } catch (jsonError) { /* fall through to default */ }
+      return fallback || 'Something went wrong.';
+    }
+
     function waLink(message){
       const number = String(state.settings.waNumber || DEFAULT_SETTINGS.waNumber).replace(/\D/g, '');
       return 'https://wa.me/' + number + '?text=' + encodeURIComponent(message);
@@ -2009,7 +2023,7 @@
         if (message) showToast(message);
       }).catch(function(error){
         console.error(error);
-        showToast((error && error.message) ? error.message : 'Could not save changes to Supabase.', true);
+        showToast(describeError(error, 'Could not save changes to Supabase.'), true);
       });
       return syncQueue;
     }
@@ -2034,7 +2048,7 @@
           renderAdmin();
         } catch (error) {
           console.error(error);
-          showToast('Could not load the admin catalog from Supabase.', true);
+          showToast(describeError(error, 'Could not load the admin catalog from Supabase.'), true);
         }
       } else {
         const sessionResult = await supabaseClient.auth.getSession();
@@ -2481,7 +2495,7 @@
         document.getElementById('new-product').focus();
       } catch (error) {
         console.error(error);
-        showToast(error.message || 'Could not sign in.', true);
+        showToast(describeError(error, 'Could not sign in.'), true);
       } finally {
         submitButton.disabled = false;
         submitButton.textContent = 'Sign in';
@@ -2491,7 +2505,7 @@
     document.getElementById('admin-signout').addEventListener('click', async function(){
       const result = await supabaseClient.auth.signOut();
       if (result.error) {
-        showToast(result.error.message || 'Could not sign out.', true);
+        showToast(describeError(result.error, 'Could not sign out.'), true);
         return;
       }
       adminApp.hidden = true;
@@ -2543,7 +2557,7 @@
         uploadedImage = '';
         productImageFileInput.value = '';
         showImagePreview(editingImage);
-        showToast(error.message || 'The image could not be prepared.', true);
+        showToast(describeError(error, 'The image could not be prepared.'), true);
       } finally {
         if (requestToken === imageUploadToken) {
           imageProcessing = false;
@@ -2622,7 +2636,7 @@
       } catch (error) {
         console.error(error);
         if (newlyUploadedUrl) await removeStoredImage(newlyUploadedUrl);
-        showToast((error && error.message) ? error.message : 'Could not save the product.', true);
+        showToast(describeError(error, 'Could not save the product.'), true);
       } finally {
         saveProductButton.disabled = false;
         if (productIdInput.value) saveProductButton.textContent = 'Save changes';
@@ -2770,7 +2784,8 @@
         resetProductForm();
         commit('Catalog backup imported.');
       } catch (error) {
-        showToast('That file is not a valid Maxcare catalog backup.', true);
+        console.error(error);
+        showToast(describeError(error, 'That file is not a valid Maxcare catalog backup.'), true);
       } finally {
         input.value = '';
       }
@@ -2785,7 +2800,7 @@
         console.error(error);
         state = makeDefaultState();
         window.setTimeout(function(){
-          showToast('Could not connect to Supabase. Showing the built-in catalog temporarily.', true);
+          showToast(describeError(error, 'Could not connect to Supabase. Showing the built-in catalog temporarily.'), true);
         }, 250);
       }
       updateGenericWhatsAppLinks();
