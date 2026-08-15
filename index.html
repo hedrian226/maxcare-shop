@@ -2603,25 +2603,59 @@
     sendEnquiry.addEventListener('click', function(event){ if (!enquiryItems.length) event.preventDefault(); });
 
 
+    function withTimeout(promise, milliseconds, message){
+      let timer;
+      const timeout = new Promise(function(_, reject){
+        timer = window.setTimeout(function(){ reject(new Error(message)); }, milliseconds);
+      });
+      return Promise.race([promise, timeout]).finally(function(){ window.clearTimeout(timer); });
+    }
+
     adminLoginForm.addEventListener('submit', async function(event){
       event.preventDefault();
       const email = document.getElementById('admin-email').value.trim();
       const password = document.getElementById('admin-password').value;
       const submitButton = adminLoginForm.querySelector('button[type="submit"]');
+      if (!email || !password) {
+        showToast('Enter your admin email and password.', true);
+        return;
+      }
+
       submitButton.disabled = true;
       submitButton.textContent = 'Signing in...';
       try {
-        const result = await supabaseClient.auth.signInWithPassword({email: email, password: password});
+        const result = await withTimeout(
+          supabaseClient.auth.signInWithPassword({email: email, password: password}),
+          15000,
+          'Sign-in timed out. Please check your internet connection and try again.'
+        );
         if (result.error) throw result.error;
 
-        const adminSession = await currentAdminSession();
+        submitButton.textContent = 'Checking access...';
+        const adminSession = await withTimeout(
+          currentAdminSession(),
+          10000,
+          'Signed in, but the admin access check timed out. Please verify the is_admin function in Supabase.'
+        );
         if (!adminSession) {
           await supabaseClient.auth.signOut();
           throw new Error('This account is not authorized as a shop administrator.');
         }
 
-        const wasEmpty = await loadStateFromSupabase(true);
-        if (wasEmpty) await syncCatalogToSupabase();
+        submitButton.textContent = 'Loading catalog...';
+        const wasEmpty = await withTimeout(
+          loadStateFromSupabase(true),
+          12000,
+          'Admin login succeeded, but loading the catalog timed out. Please check your Supabase table policies.'
+        );
+        if (wasEmpty) {
+          await withTimeout(
+            syncCatalogToSupabase(),
+            12000,
+            'Admin login succeeded, but the initial catalog sync timed out.'
+          );
+        }
+
         adminLoginView.hidden = true;
         adminApp.hidden = false;
         adminLoginForm.reset();
@@ -2631,8 +2665,8 @@
         showToast('Signed in securely.');
         document.getElementById('new-product').focus();
       } catch (error) {
-        console.error(error);
-        showToast(describeError(error, 'Could not sign in.'), true);
+        console.error('Admin sign-in failed:', error);
+        showToast(describeError(error, error && error.message ? error.message : 'Could not sign in.'), true);
       } finally {
         submitButton.disabled = false;
         submitButton.textContent = 'Sign in';
