@@ -738,6 +738,28 @@
     .enquiry-actions{grid-template-columns:1fr;}
   }
 
+  /* MULTI-IMAGE COLLECTION GALLERY */
+  .product-dialog-media{display:flex;flex-direction:column;gap:14px;align-items:stretch;}
+  .product-gallery-stage{position:relative;min-height:360px;display:grid;place-items:center;overflow:hidden;}
+  .product-gallery-stage img{width:100%;height:100%;max-height:400px;object-fit:contain;filter:drop-shadow(0 18px 18px rgba(52,16,39,.16));}
+  .gallery-nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.94);display:grid;place-items:center;font-size:1.35rem;cursor:pointer;box-shadow:0 8px 20px rgba(52,16,39,.12);}
+  .gallery-nav:hover{background:var(--blush);color:var(--primary-dark);}
+  .gallery-nav.prev{left:10px}.gallery-nav.next{right:10px}
+  .gallery-counter{position:absolute;right:10px;bottom:10px;background:rgba(52,16,39,.82);color:#fff;border-radius:999px;padding:5px 9px;font-size:.7rem;font-weight:800;}
+  .product-gallery-thumbs{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:thin;}
+  .gallery-thumb{flex:0 0 62px;width:62px;height:62px;border:2px solid transparent;border-radius:10px;background:#fff;padding:4px;cursor:pointer;overflow:hidden;}
+  .gallery-thumb[aria-current="true"]{border-color:var(--primary);background:var(--blush);}
+  .gallery-thumb img{width:100%;height:100%;object-fit:contain;filter:none;}
+  .gallery-admin{display:flex;flex-direction:column;gap:9px;margin-top:4px;}
+  .gallery-admin-item{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:9px;align-items:center;border:1px solid var(--line);border-radius:11px;padding:7px;background:#fff;}
+  .gallery-admin-item img{width:58px;height:58px;object-fit:contain;border-radius:8px;background:var(--blush);padding:4px;}
+  .gallery-admin-item span{font-size:.72rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .gallery-admin-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;}
+  .gallery-admin-actions button{min-height:36px;padding:6px 8px;}
+  .gallery-upload-status{font-size:.7rem;color:var(--muted);margin-top:4px;}
+  @media(max-width:760px){
+    .product-gallery-stage{min-height:250px}.gallery-nav{width:38px;height:38px}.gallery-thumb{flex-basis:54px;width:54px;height:54px}
+  }
   ::selection{background:var(--blush);color:var(--primary-dark);}
   :focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
 </style>
@@ -987,7 +1009,13 @@
     <button class="dialog-close" type="button" data-close-dialog="product-dialog" aria-label="Close product details">&times;</button>
     <div class="product-dialog-grid">
       <div class="product-dialog-media">
-        <img id="product-dialog-image" src="" alt="">
+        <div class="product-gallery-stage" id="product-gallery-stage">
+          <img id="product-dialog-image" src="" alt="">
+          <button class="gallery-nav prev" id="gallery-prev" type="button" aria-label="Previous image">&#8249;</button>
+          <button class="gallery-nav next" id="gallery-next" type="button" aria-label="Next image">&#8250;</button>
+          <span class="gallery-counter" id="gallery-counter"></span>
+        </div>
+        <div class="product-gallery-thumbs" id="product-gallery-thumbs" aria-label="Product images"></div>
       </div>
       <div class="product-dialog-copy">
         <div class="modal-badges" id="product-dialog-badges"></div>
@@ -1110,6 +1138,15 @@
               </div>
               <div class="form-field full">
                 <div class="image-preview" id="product-image-preview">No image selected</div>
+              </div>
+              <div class="form-field full">
+                <label for="product-gallery-files">Collection gallery</label>
+                <input id="product-gallery-files" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+                <span class="form-help">Select many photos at once. You can add 10, 20 or more. Images are optimized before upload.</span>
+                <div class="gallery-upload-status" id="gallery-upload-status"></div>
+              </div>
+              <div class="form-field full">
+                <div class="gallery-admin" id="product-gallery-admin"></div>
               </div>
               <div class="form-field full">
                 <div class="check-row">
@@ -1309,6 +1346,19 @@
       };
     }
 
+    function normaliseGallery(value){
+      if (!Array.isArray(value)) return [];
+      return value.map(function(item, index){
+        if (typeof item === 'string') return {id:createId(), url:safeImageSource(item), sortOrder:index};
+        if (!item || typeof item !== 'object') return null;
+        return {
+          id: cleanText(item.id, createId(), 100),
+          url: safeImageSource(item.url || item.image_url),
+          sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index
+        };
+      }).filter(Boolean).sort(function(a,b){ return a.sortOrder - b.sortOrder; }).map(function(item,index){ item.sortOrder=index; return item; });
+    }
+
     function normaliseProduct(product, index){
       if (!product || typeof product !== 'object') throw new Error('Invalid product record');
       const name = cleanText(product.name, 'Untitled product', 120);
@@ -1323,6 +1373,7 @@
         description: cleanText(product.description, '', 700),
         image: safeImageSource(product.image),
         alt: cleanText(product.alt, name, 150),
+        gallery: normaliseGallery(product.gallery),
         variants: normaliseVariants(product.variants),
         availability: availability,
         enabled: product.enabled !== false,
@@ -1383,6 +1434,7 @@
         description: row.description,
         image: row.image,
         alt: row.alt,
+        gallery: row.gallery || [],
         variants: row.variants,
         availability: row.availability,
         enabled: row.enabled,
@@ -1418,19 +1470,30 @@
       const fallback = makeDefaultState();
       let query = supabaseClient.from('products').select('*').order('sort_order', {ascending:true});
       if (!includeHidden) query = query.eq('enabled', true);
-      const [productsResult, categoriesResult, settingsResult] = await Promise.all([
+      const [productsResult, categoriesResult, settingsResult, galleryResult] = await Promise.all([
         query,
         supabaseClient.from('categories').select('name').order('name', {ascending:true}),
-        supabaseClient.from('site_settings').select('wa_number,generic_message,order_template').eq('id', 1).maybeSingle()
+        supabaseClient.from('site_settings').select('wa_number,generic_message,order_template').eq('id', 1).maybeSingle(),
+        supabaseClient.from('product_images').select('id,product_id,image_url,sort_order').order('sort_order', {ascending:true})
       ]);
 
       if (productsResult.error) throw productsResult.error;
       if (categoriesResult.error) throw categoriesResult.error;
 
       const rows = productsResult.data || [];
-      // Supabase is the source of truth. An empty products table must stay empty
-      // instead of restoring the built-in seed/demo products after deletion.
-      const products = rows.map(productFromRow);
+      // Supabase is the source of truth. An empty products table must stay empty.
+      const galleryRows = galleryResult && !galleryResult.error ? (galleryResult.data || []) : [];
+      galleryTableAvailable = !(galleryResult && galleryResult.error);
+      if (!galleryTableAvailable && galleryResult && galleryResult.error) console.warn('Collection gallery table is not ready:', galleryResult.error);
+      const galleryByProduct = new Map();
+      galleryRows.forEach(function(row){
+        if (!galleryByProduct.has(row.product_id)) galleryByProduct.set(row.product_id, []);
+        galleryByProduct.get(row.product_id).push({id:row.id,url:row.image_url,sortOrder:row.sort_order});
+      });
+      const products = rows.map(function(row, index){
+        row.gallery = galleryByProduct.get(row.id) || [];
+        return productFromRow(row, index);
+      });
       let categories = uniqueCategories((categoriesResult.data || []).map(function(row){ return row.name; }));
       products.forEach(function(product){
         if (!categories.some(function(category){ return category.toLowerCase() === product.category.toLowerCase(); })) {
@@ -1487,6 +1550,27 @@
         if (removed.error) throw removed.error;
       }
 
+      if (galleryTableAvailable) {
+        const galleryRows = [];
+        state.products.forEach(function(product){
+          (product.gallery || []).forEach(function(item, index){
+            galleryRows.push({id:item.id, product_id:product.id, image_url:item.url, sort_order:index});
+          });
+        });
+        if (galleryRows.length) {
+          const upsertGallery = await supabaseClient.from('product_images').upsert(galleryRows, {onConflict:'id'});
+          if (upsertGallery.error) throw upsertGallery.error;
+        }
+        const existingGallery = await supabaseClient.from('product_images').select('id');
+        if (existingGallery.error) throw existingGallery.error;
+        const keepGalleryIds = new Set(galleryRows.map(function(row){ return row.id; }));
+        const removeGalleryIds = (existingGallery.data || []).map(function(row){ return row.id; }).filter(function(id){ return !keepGalleryIds.has(id); });
+        if (removeGalleryIds.length) {
+          const removedGallery = await supabaseClient.from('product_images').delete().in('id', removeGalleryIds);
+          if (removedGallery.error) throw removedGallery.error;
+        }
+      }
+
       const existingCategories = await supabaseClient.from('categories').select('id,name');
       if (existingCategories.error) throw existingCategories.error;
       const existingNames = new Set((existingCategories.data || []).map(function(row){ return row.name.toLowerCase(); }));
@@ -1518,6 +1602,11 @@
     const clearFilters = document.getElementById('clear-filters');
     const productDialog = document.getElementById('product-dialog');
     const productDialogImage = document.getElementById('product-dialog-image');
+    const productGalleryStage = document.getElementById('product-gallery-stage');
+    const productGalleryThumbs = document.getElementById('product-gallery-thumbs');
+    const galleryPrev = document.getElementById('gallery-prev');
+    const galleryNext = document.getElementById('gallery-next');
+    const galleryCounter = document.getElementById('gallery-counter');
     const productDialogBadges = document.getElementById('product-dialog-badges');
     const productDialogCategory = document.getElementById('product-dialog-category');
     const productDialogTitle = document.getElementById('product-dialog-title');
@@ -1553,6 +1642,9 @@
     const productImageUrlInput = document.getElementById('product-image-url');
     const productImageFileInput = document.getElementById('product-image-file');
     const productImagePreview = document.getElementById('product-image-preview');
+    const productGalleryFilesInput = document.getElementById('product-gallery-files');
+    const productGalleryAdmin = document.getElementById('product-gallery-admin');
+    const galleryUploadStatus = document.getElementById('gallery-upload-status');
     const productEnabledInput = document.getElementById('product-enabled');
     const productFeaturedInput = document.getElementById('product-featured');
     const productNewInput = document.getElementById('product-new');
@@ -1578,6 +1670,11 @@
     let uploadedImage = '';
     let imageUploadToken = 0;
     let imageProcessing = false;
+    let galleryTableAvailable = true;
+    let pendingGalleryImages = [];
+    let editingGallery = [];
+    let modalGalleryImages = [];
+    let modalGalleryIndex = 0;
     let toastTimer;
 
     function sortedProducts(){
@@ -1973,11 +2070,48 @@
       }
     }
 
+    function productGallerySources(product){
+      const sources = [product.image].concat((product.gallery || []).map(function(item){ return item.url; }));
+      return sources.filter(function(source, index, all){ return source && all.indexOf(source) === index; });
+    }
+
+    function renderModalGallery(index){
+      if (!modalGalleryImages.length) return;
+      modalGalleryIndex = (index + modalGalleryImages.length) % modalGalleryImages.length;
+      const product = state.products.find(function(item){ return item.id === currentProductId; });
+      setImage(productDialogImage, modalGalleryImages[modalGalleryIndex], (product ? product.name : 'Product') + ' image ' + (modalGalleryIndex + 1));
+      galleryCounter.textContent = (modalGalleryIndex + 1) + ' / ' + modalGalleryImages.length;
+      galleryPrev.hidden = modalGalleryImages.length < 2;
+      galleryNext.hidden = modalGalleryImages.length < 2;
+      productGalleryThumbs.hidden = modalGalleryImages.length < 2;
+      Array.from(productGalleryThumbs.querySelectorAll('.gallery-thumb')).forEach(function(button, thumbIndex){
+        button.setAttribute('aria-current', thumbIndex === modalGalleryIndex ? 'true' : 'false');
+        if (thumbIndex === modalGalleryIndex) button.scrollIntoView({block:'nearest',inline:'nearest'});
+      });
+    }
+
+    function setupModalGallery(product){
+      modalGalleryImages = productGallerySources(product);
+      productGalleryThumbs.replaceChildren();
+      modalGalleryImages.forEach(function(source, index){
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'gallery-thumb';
+        button.setAttribute('aria-label', 'Show image ' + (index + 1));
+        const image = document.createElement('img');
+        setImage(image, source, product.name + ' thumbnail ' + (index + 1));
+        button.appendChild(image);
+        button.addEventListener('click', function(){ renderModalGallery(index); });
+        productGalleryThumbs.appendChild(button);
+      });
+      renderModalGallery(0);
+    }
+
     function openProduct(productId){
       const product = state.products.find(function(item){ return item.id === productId && item.enabled; });
       if (!product) return;
       currentProductId = product.id;
-      setImage(productDialogImage, product.image, product.alt || product.name);
+      setupModalGallery(product);
       productDialogBadges.replaceChildren();
       appendProductBadges(productDialogBadges, product, true);
       productDialogCategory.textContent = product.category;
@@ -2093,7 +2227,7 @@
       info.appendChild(title);
       const meta = document.createElement('div');
       meta.className = 'admin-product-meta';
-      [product.category, statusLabel(product.availability), product.enabled ? 'Visible' : 'Hidden'].forEach(function(text){
+      [product.category, statusLabel(product.availability), product.enabled ? 'Visible' : 'Hidden', ((product.gallery || []).length + 1) + ' photos'].forEach(function(text){
         const span = document.createElement('span');
         span.textContent = text;
         meta.appendChild(span);
@@ -2229,6 +2363,52 @@
       fillSettingsForm();
     }
 
+    function renderGalleryAdmin(){
+      productGalleryAdmin.replaceChildren();
+      const items = editingGallery.concat(pendingGalleryImages.map(function(item, index){
+        return {id:'pending-' + index, url:item.dataUrl, pending:true, fileName:item.fileName};
+      }));
+      if (!items.length) {
+        const empty = document.createElement('span');
+        empty.className = 'form-help';
+        empty.textContent = 'No additional collection photos yet.';
+        productGalleryAdmin.appendChild(empty);
+      } else {
+        items.forEach(function(item, index){
+          const row = document.createElement('div');
+          row.className = 'gallery-admin-item';
+          const image = document.createElement('img');
+          setImage(image, item.url, 'Gallery image ' + (index + 1));
+          row.appendChild(image);
+          const label = document.createElement('span');
+          label.textContent = item.pending ? ('Ready to upload: ' + (item.fileName || 'photo')) : ('Photo ' + (index + 1));
+          row.appendChild(label);
+          const actions = document.createElement('div');
+          actions.className = 'gallery-admin-actions';
+          if (index > 0) {
+            const up = document.createElement('button'); up.type='button'; up.className='icon-btn'; up.textContent='Up'; up.dataset.galleryAction='up'; up.dataset.galleryIndex=String(index); actions.appendChild(up);
+          }
+          if (index < items.length - 1) {
+            const down = document.createElement('button'); down.type='button'; down.className='icon-btn'; down.textContent='Down'; down.dataset.galleryAction='down'; down.dataset.galleryIndex=String(index); actions.appendChild(down);
+          }
+          const remove = document.createElement('button'); remove.type='button'; remove.className='icon-btn danger'; remove.textContent='Remove'; remove.dataset.galleryAction='remove'; remove.dataset.galleryIndex=String(index); actions.appendChild(remove);
+          row.appendChild(actions);
+          productGalleryAdmin.appendChild(row);
+        });
+      }
+      galleryUploadStatus.textContent = items.length ? items.length + (items.length === 1 ? ' additional photo' : ' additional photos') : '';
+    }
+
+    function combinedGalleryItems(){
+      return editingGallery.map(function(item){ return {kind:'saved', value:item}; }).concat(pendingGalleryImages.map(function(item){ return {kind:'pending', value:item}; }));
+    }
+
+    function applyCombinedGalleryItems(items){
+      editingGallery = items.filter(function(item){ return item.kind === 'saved'; }).map(function(item){ return item.value; });
+      pendingGalleryImages = items.filter(function(item){ return item.kind === 'pending'; }).map(function(item){ return item.value; });
+      renderGalleryAdmin();
+    }
+
     function showImagePreview(source){
       productImagePreview.replaceChildren();
       if (!source) {
@@ -2271,6 +2451,9 @@
       productIdInput.value = '';
       editingImage = '';
       uploadedImage = '';
+      pendingGalleryImages = [];
+      editingGallery = [];
+      productGalleryFilesInput.value = '';
       productEnabledInput.checked = true;
       productAvailabilityInput.value = 'in-stock';
       productFormTitle.textContent = 'Add product';
@@ -2278,6 +2461,7 @@
       cancelEditButton.hidden = true;
       renderCategoryOptions();
       showImagePreview('');
+      renderGalleryAdmin();
     }
 
     function editProduct(productId){
@@ -2299,7 +2483,11 @@
       productNewInput.checked = product.isNew;
       editingImage = product.image;
       uploadedImage = '';
+      editingGallery = cloneValue(product.gallery || []);
+      pendingGalleryImages = [];
+      productGalleryFilesInput.value = '';
       showImagePreview(product.image);
+      renderGalleryAdmin();
       productFormTitle.textContent = 'Edit product';
       saveProductButton.textContent = 'Save changes';
       cancelEditButton.hidden = false;
@@ -2455,6 +2643,18 @@
       if (productDialogOrder.getAttribute('aria-disabled') === 'true') event.preventDefault();
     });
 
+    galleryPrev.addEventListener('click', function(){ renderModalGallery(modalGalleryIndex - 1); });
+    galleryNext.addEventListener('click', function(){ renderModalGallery(modalGalleryIndex + 1); });
+    let galleryTouchStartX = null;
+    productGalleryStage.addEventListener('touchstart', function(event){ galleryTouchStartX = event.touches && event.touches[0] ? event.touches[0].clientX : null; }, {passive:true});
+    productGalleryStage.addEventListener('touchend', function(event){
+      if (galleryTouchStartX == null || !event.changedTouches || !event.changedTouches[0] || modalGalleryImages.length < 2) return;
+      const delta = event.changedTouches[0].clientX - galleryTouchStartX;
+      galleryTouchStartX = null;
+      if (Math.abs(delta) < 45) return;
+      renderModalGallery(modalGalleryIndex + (delta < 0 ? 1 : -1));
+    }, {passive:true});
+
     productDialogEnquiry.addEventListener('click', function(){
       const product = state.products.find(function(item){ return item.id === currentProductId; });
       if (!product) return;
@@ -2569,6 +2769,51 @@
       }
     });
 
+    productGalleryFilesInput.addEventListener('change', async function(){
+      const files = Array.from(productGalleryFilesInput.files || []);
+      if (!files.length) return;
+      if (!galleryTableAvailable) {
+        productGalleryFilesInput.value = '';
+        showToast('Collection gallery needs the product_images Supabase table first. Run the included SQL setup.', true);
+        return;
+      }
+      imageProcessing = true;
+      productGalleryFilesInput.disabled = true;
+      saveProductButton.disabled = true;
+      galleryUploadStatus.textContent = 'Preparing ' + files.length + ' photo(s)...';
+      try {
+        for (let i = 0; i < files.length; i += 1) {
+          const dataUrl = await fileToResizedImage(files[i]);
+          pendingGalleryImages.push({dataUrl:dataUrl, fileName:files[i].name});
+          galleryUploadStatus.textContent = 'Preparing photo ' + (i + 1) + ' of ' + files.length + '...';
+        }
+        renderGalleryAdmin();
+        showToast(files.length + (files.length === 1 ? ' gallery photo ready.' : ' gallery photos ready.'));
+      } catch (error) {
+        console.error(error);
+        showToast(describeError(error, 'One of the gallery images could not be prepared.'), true);
+      } finally {
+        imageProcessing = false;
+        productGalleryFilesInput.disabled = false;
+        saveProductButton.disabled = false;
+        productGalleryFilesInput.value = '';
+        renderGalleryAdmin();
+      }
+    });
+
+    productGalleryAdmin.addEventListener('click', function(event){
+      const button = event.target.closest('[data-gallery-action]');
+      if (!button) return;
+      const items = combinedGalleryItems();
+      const index = Number(button.dataset.galleryIndex);
+      if (!Number.isInteger(index) || index < 0 || index >= items.length) return;
+      const action = button.dataset.galleryAction;
+      if (action === 'remove') items.splice(index, 1);
+      if (action === 'up' && index > 0) { const item = items.splice(index,1)[0]; items.splice(index-1,0,item); }
+      if (action === 'down' && index < items.length-1) { const item = items.splice(index,1)[0]; items.splice(index+1,0,item); }
+      applyCombinedGalleryItems(items);
+    });
+
     productForm.addEventListener('submit', async function(event){
       event.preventDefault();
       if (imageProcessing) {
@@ -2590,8 +2835,10 @@
       const existing = state.products.find(function(product){ return product.id === productIdInput.value; });
       const productId = existing ? existing.id : createId();
       const previousImage = existing ? existing.image : '';
+      const previousGallery = existing ? cloneValue(existing.gallery || []) : [];
       let finalImage = safeImageSource(imageUrl || editingImage || PLACEHOLDER_IMAGE);
       let newlyUploadedUrl = '';
+      const newlyUploadedGalleryUrls = [];
       saveProductButton.disabled = true;
 
       try {
@@ -2600,6 +2847,18 @@
           newlyUploadedUrl = await uploadProductImage(productId, uploadedImage);
           finalImage = newlyUploadedUrl;
         }
+
+        const uploadedGalleryItems = [];
+        if (pendingGalleryImages.length) {
+          if (!galleryTableAvailable) throw new Error('Collection gallery is not configured in Supabase yet.');
+          for (let i = 0; i < pendingGalleryImages.length; i += 1) {
+            saveProductButton.textContent = 'Uploading gallery ' + (i + 1) + ' / ' + pendingGalleryImages.length + '...';
+            const galleryUrl = await uploadProductImage(productId, pendingGalleryImages[i].dataUrl);
+            newlyUploadedGalleryUrls.push(galleryUrl);
+            uploadedGalleryItems.push({id:createId(), url:galleryUrl, sortOrder:editingGallery.length + i});
+          }
+        }
+        const finalGallery = editingGallery.concat(uploadedGalleryItems).map(function(item,index){ item.sortOrder=index; return item; });
 
         const now = new Date().toISOString();
         const product = {
@@ -2610,6 +2869,7 @@
           description: description,
           image: finalImage,
           alt: name,
+          gallery: finalGallery,
           variants: parseVariantInput(productVariantsInput.value),
           availability: productAvailabilityInput.value,
           enabled: productEnabledInput.checked,
@@ -2635,9 +2895,14 @@
         if (newlyUploadedUrl && previousImage && previousImage !== newlyUploadedUrl) {
           await removeStoredImage(previousImage);
         }
+        const keptGalleryUrls = new Set(finalGallery.map(function(item){ return item.url; }));
+        for (const oldItem of previousGallery) {
+          if (!keptGalleryUrls.has(oldItem.url)) await removeStoredImage(oldItem.url);
+        }
       } catch (error) {
         console.error(error);
         if (newlyUploadedUrl) await removeStoredImage(newlyUploadedUrl);
+        for (const galleryUrl of newlyUploadedGalleryUrls) await removeStoredImage(galleryUrl);
         showToast(describeError(error, 'Could not save the product.'), true);
       } finally {
         saveProductButton.disabled = false;
@@ -2684,6 +2949,7 @@
         if (productIdInput.value === productId) resetProductForm();
         await commit('Product deleted.');
         await removeStoredImage(product.image);
+        for (const galleryItem of (product.gallery || [])) await removeStoredImage(galleryItem.url);
         focusAdminAction(fallbackProduct && fallbackProduct.id, 'edit');
       }
     });
