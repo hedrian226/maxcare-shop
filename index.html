@@ -2937,28 +2937,41 @@
         if (preparedCover) preparedPhotos.push({cover:true, dataUrl:preparedCover, fileName:'Cover photo'});
         preparedExtras.forEach(function(item){ preparedPhotos.push({cover:false, dataUrl:item.dataUrl, fileName:item.fileName}); });
 
-        if (preparedPhotos.length > 1) {
-          if (!galleryTableAvailable) await refreshGalleryTableAvailability();
-          if (!galleryTableAvailable) throw new Error('The product was saved, but extra photos need the product_images table in Supabase. Run the gallery SQL once, refresh, then edit this product and upload the photos again.');
-        }
-
-        const uploaded = [];
-        for (let i = 0; i < preparedPhotos.length; i += 1) {
-          saveProductButton.textContent = 'Uploading photo ' + (i + 1) + ' / ' + preparedPhotos.length + '...';
-          showToast('Uploading photo ' + (i + 1) + ' of ' + preparedPhotos.length + '...');
-          const url = await uploadProductImage(productId, preparedPhotos[i].dataUrl);
-          uploaded.push({cover:preparedPhotos[i].cover, url:url});
-        }
-
-        if (uploaded.length) {
-          const coverUpload = uploaded.find(function(item){ return item.cover; });
-          if (coverUpload) product.image = coverUpload.url;
-          const newGallery = uploaded.filter(function(item){ return !item.cover; }).map(function(item, index){
-            return {id:createId(), url:item.url, sortOrder:product.gallery.length + index};
-          });
-          product.gallery = product.gallery.concat(newGallery).map(function(item,index){ item.sortOrder=index; return item; });
+        // Upload and save the cover FIRST. Never let a gallery-table problem stop
+        // the main photo from appearing on the product card / View details.
+        let uploadNumber = 0;
+        if (preparedCover) {
+          uploadNumber += 1;
+          saveProductButton.textContent = 'Uploading photo ' + uploadNumber + ' / ' + preparedPhotos.length + '...';
+          showToast('Uploading cover photo...');
+          const coverUrl = await uploadProductImage(productId, preparedCover);
+          product.image = coverUrl;
           product.updatedAt = new Date().toISOString();
-          saveProductButton.textContent = 'Finishing...';
+          await syncCatalogToSupabase();
+          renderProducts();
+          renderAdmin();
+        }
+
+        // Extra photos use product_images. Re-check the table only AFTER the cover
+        // is safely uploaded and saved, so a gallery setup issue cannot leave a pink placeholder.
+        if (preparedExtras.length) {
+          await refreshGalleryTableAvailability();
+          if (!galleryTableAvailable) {
+            throw new Error('The cover photo was saved, but the extra photos cannot be saved because the product_images table is not available to this admin account. Run the Maxcare product_images SQL in Supabase, then refresh and edit this product to add the remaining photos.');
+          }
+
+          const newlyUploadedGallery = [];
+          for (let i = 0; i < preparedExtras.length; i += 1) {
+            uploadNumber += 1;
+            saveProductButton.textContent = 'Uploading photo ' + uploadNumber + ' / ' + preparedPhotos.length + '...';
+            showToast('Uploading photo ' + uploadNumber + ' of ' + preparedPhotos.length + '...');
+            const url = await uploadProductImage(productId, preparedExtras[i].dataUrl);
+            newlyUploadedGallery.push({id:createId(), url:url, sortOrder:product.gallery.length + newlyUploadedGallery.length});
+          }
+
+          product.gallery = product.gallery.concat(newlyUploadedGallery).map(function(item,index){ item.sortOrder=index; return item; });
+          product.updatedAt = new Date().toISOString();
+          saveProductButton.textContent = 'Saving all photos...';
           await syncCatalogToSupabase();
         }
 
