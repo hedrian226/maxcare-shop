@@ -1693,12 +1693,21 @@
       return 'https://wa.me/' + number + '?text=' + encodeURIComponent(message);
     }
 
+    function productLink(product){
+      if (!product || !product.id) return window.location.href.split('#')[0];
+      const url = new URL(window.location.href);
+      url.searchParams.set('product', product.id);
+      url.hash = '';
+      return url.toString();
+    }
+
     function orderMessage(product, variant){
       const productName = product.whatsappName || product.name;
       const variantText = variant ? ' - Option: ' + variant : '';
-      return state.settings.orderTemplate
+      const message = state.settings.orderTemplate
         .split('{product}').join(productName)
         .split('{variant}').join(variantText);
+      return message + '\n\nProduct link: ' + productLink(product);
     }
 
     function enquiryKey(productId, variant){ return productId + '::' + (variant || ''); }
@@ -1740,12 +1749,14 @@
 
     function enquiryMessage(){
       const lines = ['Hi Maxcare! I would like to enquire about these products:', ''];
-      enquiryItems.forEach(function(item){
+      enquiryItems.forEach(function(item, index){
         const product = state.products.find(function(p){ return p.id === item.productId; });
         if (!product) return;
-        lines.push('• ' + (product.whatsappName || product.name) + (item.variant ? ' — ' + item.variant : ''));
+        lines.push((index + 1) + '. ' + (product.whatsappName || product.name) + (item.variant ? ' — ' + item.variant : ''));
+        lines.push(productLink(product));
+        lines.push('');
       });
-      lines.push('', 'Could you please confirm availability, pricing and delivery/pickup options?');
+      lines.push('Could you please confirm availability, pricing and delivery/pickup options?');
       return lines.join('\n');
     }
 
@@ -3130,6 +3141,11 @@
       loadEnquiry();
       renderProducts();
       renderEnquiry();
+
+      const linkedProductId = new URL(window.location.href).searchParams.get('product');
+      if (linkedProductId) {
+        window.setTimeout(function(){ openProduct(linkedProductId); }, 0);
+      }
     }
 
     initialiseShop();
