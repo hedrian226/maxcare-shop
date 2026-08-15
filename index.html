@@ -2239,7 +2239,7 @@
       info.appendChild(title);
       const meta = document.createElement('div');
       meta.className = 'admin-product-meta';
-      [product.category, statusLabel(product.availability), product.enabled ? 'Visible' : 'Hidden', ((product.gallery || []).length + 1) + ' photos'].forEach(function(text){
+      [product.category, statusLabel(product.availability), product.enabled ? 'Visible' : 'Hidden', ((product.gallery || []).length + 1) + (((product.gallery || []).length + 1) === 1 ? ' photo' : ' photos')].forEach(function(text){
         const span = document.createElement('span');
         span.textContent = text;
         meta.appendChild(span);
@@ -2960,23 +2960,44 @@
             throw new Error('The cover photo was saved, but the extra photos cannot be saved because the product_images table is not available to this admin account. Run the Maxcare product_images SQL in Supabase, then refresh and edit this product to add the remaining photos.');
           }
 
+          // Save EACH extra photo to product_images immediately after it uploads.
+          // This avoids waiting until the end of the whole batch and prevents the
+          // gallery from being lost if a later photo fails.
           const newlyUploadedGallery = [];
           for (let i = 0; i < preparedExtras.length; i += 1) {
             uploadNumber += 1;
             saveProductButton.textContent = 'Uploading photo ' + uploadNumber + ' / ' + preparedPhotos.length + '...';
             showToast('Uploading photo ' + uploadNumber + ' of ' + preparedPhotos.length + '...');
-            const url = await uploadProductImage(productId, preparedExtras[i].dataUrl);
-            newlyUploadedGallery.push({id:createId(), url:url, sortOrder:product.gallery.length + newlyUploadedGallery.length});
-          }
 
-          product.gallery = product.gallery.concat(newlyUploadedGallery).map(function(item,index){ item.sortOrder=index; return item; });
-          product.updatedAt = new Date().toISOString();
-          saveProductButton.textContent = 'Saving all photos...';
-          await syncCatalogToSupabase();
+            const url = await uploadProductImage(productId, preparedExtras[i].dataUrl);
+            const galleryItem = {
+              id: createId(),
+              url: url,
+              sortOrder: product.gallery.length + newlyUploadedGallery.length
+            };
+
+            const insertResult = await supabaseClient.from('product_images').insert({
+              id: galleryItem.id,
+              product_id: productId,
+              image_url: galleryItem.url,
+              sort_order: galleryItem.sortOrder
+            });
+
+            if (insertResult.error) {
+              await removeStoredImage(url);
+              throw new Error('Photo ' + uploadNumber + ' uploaded to Storage but could not be linked to the product: ' + insertResult.error.message);
+            }
+
+            newlyUploadedGallery.push(galleryItem);
+            product.gallery = product.gallery.concat([galleryItem]).map(function(item,index){ item.sortOrder=index; return item; });
+            product.updatedAt = new Date().toISOString();
+            renderProducts();
+            renderAdmin();
+          }
         }
 
         // Clean up images that were replaced only after the new data is safely saved.
-        if (uploaded.length && previousImage && product.image !== previousImage) await removeStoredImage(previousImage);
+        if (previousImage && product.image !== previousImage) await removeStoredImage(previousImage);
         const keptGalleryUrls = new Set((product.gallery || []).map(function(item){ return item.url; }));
         for (const oldItem of previousGallery) {
           if (!keptGalleryUrls.has(oldItem.url)) await removeStoredImage(oldItem.url);
