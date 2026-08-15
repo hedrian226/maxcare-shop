@@ -1701,13 +1701,25 @@
       return url.toString();
     }
 
+    function productImageLink(product){
+      if (!product) return '';
+      const candidates = [product.image].concat((product.gallery || []).map(function(item){ return item && item.url; }));
+      for (let i = 0; i < candidates.length; i += 1) {
+        const source = String(candidates[i] || '').trim();
+        if (/^https?:\/\//i.test(source)) return source;
+      }
+      return '';
+    }
+
     function orderMessage(product, variant){
       const productName = product.whatsappName || product.name;
       const variantText = variant ? ' - Option: ' + variant : '';
       const message = state.settings.orderTemplate
         .split('{product}').join(productName)
         .split('{variant}').join(variantText);
-      return message + '\n\nProduct link: ' + productLink(product);
+      const imageLink = productImageLink(product);
+      return message + '\n\nProduct link: ' + productLink(product)
+        + (imageLink ? '\nProduct image: ' + imageLink : '');
     }
 
     function enquiryKey(productId, variant){ return productId + '::' + (variant || ''); }
@@ -1753,7 +1765,9 @@
         const product = state.products.find(function(p){ return p.id === item.productId; });
         if (!product) return;
         lines.push((index + 1) + '. ' + (product.whatsappName || product.name) + (item.variant ? ' — ' + item.variant : ''));
-        lines.push(productLink(product));
+        lines.push('Product link: ' + productLink(product));
+        const imageLink = productImageLink(product);
+        if (imageLink) lines.push('Product image: ' + imageLink);
         lines.push('');
       });
       lines.push('Could you please confirm availability, pricing and delivery/pickup options?');
