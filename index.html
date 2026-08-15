@@ -1138,7 +1138,7 @@
               </div>
               <div class="form-field full">
                 <label for="product-image-file">Upload product photos</label>
-                <input id="product-image-file" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+                <input id="product-image-file" type="file" accept="image/*" multiple>
                 <span class="form-help">Choose 1, 10, 20, 30 or more photos at once. The first selected photo becomes the cover image. The rest are shown inside View details.</span>
                 <div class="gallery-upload-status" id="gallery-upload-status"></div>
               </div>
@@ -1709,6 +1709,18 @@
         if (asText && asText !== '{}') return asText;
       } catch (jsonError) { /* fall through to default */ }
       return fallback || 'Something went wrong.';
+    }
+
+    async function refreshGalleryTableAvailability(){
+      try {
+        const probe = await supabaseClient.from('product_images').select('id').limit(1);
+        galleryTableAvailable = !probe.error;
+        if (probe.error) console.warn('product_images availability check failed:', probe.error);
+      } catch (error) {
+        galleryTableAvailable = false;
+        console.warn('product_images availability check failed:', error);
+      }
+      return galleryTableAvailable;
     }
 
     function waLink(message){
@@ -2371,7 +2383,7 @@
       if (!items.length) {
         const empty = document.createElement('span');
         empty.className = 'form-help';
-        empty.textContent = 'No additional collection photos yet.';
+        empty.textContent = 'No additional product photos yet.';
         productGalleryAdmin.appendChild(empty);
       } else {
         items.forEach(function(item, index){
@@ -2406,11 +2418,11 @@
       const savedCount = editingGallery.length;
       galleryUploadStatus.classList.toggle('has-files', items.length > 0);
       if (readyCount) {
-        galleryUploadStatus.textContent = readyCount + (readyCount === 1 ? ' new photo ready to upload' : ' new photos ready to upload') + (savedCount ? ' · ' + savedCount + ' additional photos already saved' : '') + '. Click ' + (productIdInput.value ? 'Save changes' : 'Add product') + ' to upload.';
+        galleryUploadStatus.textContent = readyCount + (readyCount === 1 ? ' new photo ready to upload' : ' new photos ready to upload') + (savedCount ? ' · ' + savedCount + ' product photos already saved' : '') + '. Click ' + (productIdInput.value ? 'Save changes' : 'Add product') + ' to upload.';
       } else if (savedCount) {
-        galleryUploadStatus.textContent = savedCount + (savedCount === 1 ? ' additional photo saved' : ' additional photos saved') + '.';
+        galleryUploadStatus.textContent = savedCount + (savedCount === 1 ? ' product photo saved' : ' product photos saved') + '.';
       } else {
-        galleryUploadStatus.textContent = 'No additional photos selected yet.';
+        galleryUploadStatus.textContent = 'No extra product photos selected yet.';
       }
     }
 
@@ -2761,11 +2773,9 @@
     productImageFileInput.addEventListener('change', async function(){
       const files = Array.from(productImageFileInput.files || []);
       if (!files.length) return;
-      if (files.length > 1 && !galleryTableAvailable) {
-        productImageFileInput.value = '';
-        showToast('Multiple photos need the product_images Supabase table. Run the gallery SQL setup first.', true);
-        return;
-      }
+      // Re-check the gallery table whenever a batch is selected. Do not block
+      // local preparation just because an earlier anonymous page-load probe failed.
+      if (files.length > 1) refreshGalleryTableAvailability();
 
       const requestToken = ++imageUploadToken;
       imageProcessing = true;
@@ -2890,7 +2900,8 @@
 
         const uploadedGalleryItems = [];
         if (pendingGalleryImages.length) {
-          if (!galleryTableAvailable) throw new Error('Multiple-photo upload is not configured in Supabase yet.');
+          if (!galleryTableAvailable) await refreshGalleryTableAvailability();
+          if (!galleryTableAvailable) throw new Error('The extra photos are ready, but Supabase cannot access the product_images table. Run the gallery SQL once, then refresh the site and try again.');
           for (let i = 0; i < pendingGalleryImages.length; i += 1) {
             saveProductButton.textContent = 'Uploading photo ' + (i + 2) + ' / ' + (pendingGalleryImages.length + 1) + '...';
             const galleryUrl = await uploadProductImage(productId, pendingGalleryImages[i].dataUrl);
