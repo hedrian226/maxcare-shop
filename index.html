@@ -1695,7 +1695,7 @@
         availability: availability,
         enabled: product.enabled !== false,
         featured: product.featured === true,
-        isNew: product.isNew === true,
+        isNew: product.isNew === true || product.isNew === 'true' || product.isNew === 1,
         archived: product.archived === true,
         order: Number.isFinite(numericOrder) ? numericOrder : index,
         createdAt: cleanText(product.createdAt, new Date().toISOString(), 50),

@@ -1724,7 +1724,7 @@
         availability: availability,
         enabled: product.enabled !== false,
         featured: product.featured === true,
-        isNew: product.isNew === true,
+        isNew: product.isNew === true || product.isNew === 'true' || product.isNew === 1,
         archived: product.archived === true,
         order: Number.isFinite(numericOrder) ? numericOrder : index,
         createdAt: cleanText(product.createdAt, new Date().toISOString(), 50),
@@ -1876,6 +1876,24 @@
       const session = await currentAdminSession();
       if (!session) throw new Error('This account is not authorized as a shop administrator.');
       return session;
+    }
+
+    async function persistProductFlags(product){
+      await requireAdminSession();
+      const result = await supabaseClient.from('products')
+        .update({
+          featured: product.featured === true,
+          is_new: product.isNew === true,
+          updated_at: product.updatedAt || new Date().toISOString()
+        })
+        .eq('id', product.id)
+        .select('id,featured,is_new')
+        .single();
+      if (result.error) throw result.error;
+      if (!result.data || Boolean(result.data.featured) !== Boolean(product.featured) || Boolean(result.data.is_new) !== Boolean(product.isNew)) {
+        throw new Error('Supabase did not save the Featured/New flags correctly.');
+      }
+      return result.data;
     }
 
     async function syncCatalogToSupabase(){
@@ -3409,6 +3427,9 @@
         renderAdmin();
         saveProductButton.textContent = 'Saving product...';
         await syncCatalogToSupabase();
+        // Save and verify the two storefront discovery flags separately. This prevents
+        // a later catalog/image sync from silently reverting Featured or New.
+        await persistProductFlags(product);
 
         const preparedPhotos = [];
         if (preparedCover) preparedPhotos.push({cover:true, dataUrl:preparedCover, fileName:'Cover photo'});
@@ -3425,6 +3446,7 @@
           product.image = coverUrl;
           product.updatedAt = new Date().toISOString();
           await syncCatalogToSupabase();
+          await persistProductFlags(product);
           renderProducts();
           renderAdmin();
         }
@@ -3448,6 +3470,7 @@
 
             // Save after each successful upload so partial progress is never lost.
             await syncCatalogToSupabase();
+            await persistProductFlags(product);
             renderProducts();
             renderAdmin();
           }
@@ -3460,9 +3483,12 @@
           if (!keptGalleryUrls.has(oldItem.url)) await removeStoredImage(oldItem.url);
         }
 
+        // Reload once from Supabase so the admin immediately reflects the exact saved values.
+        await loadStateFromSupabase(true);
         renderProducts();
+        renderDiscovery();
         renderAdmin();
-        showToast(preparedPhotos.length > 1 ? (preparedPhotos.length + ' photos uploaded. Product saved.') : 'Product saved.');
+        showToast(product.isNew ? 'Product saved and added to New arrivals.' : (preparedPhotos.length > 1 ? (preparedPhotos.length + ' photos uploaded. Product saved.') : 'Product saved.'));
         resetProductForm();
       } catch (error) {
         console.error(error);
