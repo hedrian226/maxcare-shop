@@ -817,6 +817,63 @@
     .product-gallery-stage img{max-height:42dvh;}
   }
 
+  /* FEATURED / NEW / BRAND / SHARE / RELATED PRODUCTS */
+  .discovery-section{padding:54px 0 26px;}
+  .discovery-section[hidden]{display:none!important;}
+  .discovery-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:22px;}
+  .discovery-head h2{font-size:clamp(1.55rem,3vw,2rem);}
+  .discovery-head p{margin:6px 0 0;color:var(--muted);font-size:.9rem;}
+  .discovery-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;}
+  .mini-product{border:1px solid var(--line);background:#fff;border-radius:18px;overflow:hidden;cursor:pointer;min-width:0;box-shadow:0 10px 28px -24px rgba(52,16,39,.42);}
+  .mini-product-media{aspect-ratio:1/1;background:linear-gradient(160deg,#FFF0F6,#fff 72%);padding:16px;display:grid;place-items:center;}
+  .mini-product-media img{width:100%;height:100%;object-fit:contain;}
+  .mini-product-copy{padding:13px 14px 15px;}
+  .mini-product-brand{font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;color:var(--primary-dark);font-weight:800;margin-bottom:5px;}
+  .mini-product h3{font-family:'Manrope',sans-serif;font-size:.85rem;line-height:1.35;margin:0;}
+  .product-brand{font-size:.72rem;font-weight:800;color:var(--primary-dark);letter-spacing:.07em;text-transform:uppercase;}
+  .brand-chip{border-color:rgba(142,57,254,.22);}
+  .related-products{margin-top:28px;padding-top:22px;border-top:1px solid var(--line);}
+  .related-products h3{font-family:'Manrope',sans-serif;font-size:.86rem;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px;}
+  .related-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;}
+  .related-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:8px;cursor:pointer;min-width:0;text-align:left;}
+  .related-card img{width:100%;aspect-ratio:1/1;object-fit:contain;background:var(--blush);border-radius:8px;margin-bottom:7px;}
+  .related-card span{display:block;font-size:.69rem;font-weight:800;line-height:1.25;overflow-wrap:anywhere;}
+  .share-btn{background:#fff;color:var(--primary-dark);border:1.5px solid var(--primary);box-shadow:none;}
+  @media(max-width:900px){.discovery-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media(max-width:600px){
+    .discovery-section{padding:38px 0 14px;}
+    .discovery-head{align-items:flex-start;}
+    .discovery-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;gap:12px;}
+    .mini-product{flex:0 0 72vw;max-width:280px;scroll-snap-align:start;}
+    .related-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+  }
+
+
+
+  /* ADMIN DASHBOARD + SEARCH + ARCHIVE */
+  .admin-dashboard{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px;}
+  .admin-stat{border:1px solid var(--line);background:#fff;border-radius:14px;padding:14px;min-width:0;box-shadow:0 8px 20px -18px rgba(52,16,39,.35);}
+  .admin-stat b{display:block;font-family:'Fraunces',serif;font-size:1.35rem;color:var(--primary-dark);line-height:1;}
+  .admin-stat span{display:block;margin-top:7px;font-size:.67rem;line-height:1.25;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;overflow-wrap:anywhere;}
+  button.admin-stat{cursor:pointer;text-align:left;color:inherit;}
+  button.admin-stat:hover{border-color:var(--primary);background:var(--blush);}
+  .admin-catalog-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;margin-bottom:14px;}
+  .admin-search{position:relative;min-width:0;}
+  .admin-search input{width:100%;min-height:46px;border:1.5px solid var(--line);border-radius:12px;padding:10px 13px 10px 40px;background:#fff;color:var(--ink);outline:none;}
+  .admin-search input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(224,18,95,.09);}
+  .admin-search::before{content:'⌕';position:absolute;left:14px;top:50%;transform:translateY(-52%);font-size:1.15rem;color:var(--muted);pointer-events:none;}
+  .admin-view-tabs{display:flex;gap:7px;flex-wrap:wrap;}
+  .admin-view-tab{min-height:44px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:.75rem;font-weight:800;color:var(--muted);cursor:pointer;}
+  .admin-view-tab[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .admin-product.is-archived{background:#F7F2F5;border-style:dashed;}
+  .admin-product.is-archived .admin-thumb{opacity:.62;filter:grayscale(.25);}
+  .archive-note{font-size:.7rem;color:var(--muted);margin-top:3px;}
+  .image-manager-note{margin:8px 0 4px;padding:10px 12px;border-radius:11px;background:var(--bg);border:1px solid var(--line);font-size:.7rem;line-height:1.45;color:var(--muted);}
+  .gallery-admin-item .cover-choice{grid-column:1/-1;background:var(--ink);color:#fff;border-color:var(--ink);}
+  .gallery-admin-item .cover-choice:hover{background:#5A183C;color:#fff;}
+  @media(max-width:1100px){.admin-dashboard{grid-template-columns:repeat(3,minmax(0,1fr));}}
+  @media(max-width:760px){.admin-dashboard{grid-template-columns:repeat(2,minmax(0,1fr));}.admin-catalog-tools{grid-template-columns:1fr}.admin-view-tabs{width:100%}.admin-view-tab{flex:1}.admin-stat{padding:12px}.admin-stat b{font-size:1.2rem}}
+
   ::selection{background:var(--blush);color:var(--primary-dark);}
   :focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
 
@@ -1094,6 +1151,20 @@
   </div>
 </div>
 
+
+<section class="discovery-section" id="featured-section" hidden>
+  <div class="wrap">
+    <div class="discovery-head"><div><span class="eyebrow"><span class="dot"></span> Editor picks</span><h2>Featured products</h2><p>Popular salon essentials selected by Maxcare.</p></div></div>
+    <div class="discovery-grid" id="featured-grid"></div>
+  </div>
+</section>
+<section class="discovery-section" id="new-section" hidden>
+  <div class="wrap">
+    <div class="discovery-head"><div><span class="eyebrow"><span class="dot"></span> Just added</span><h2>New arrivals</h2><p>Fresh additions to the Maxcare catalog.</p></div></div>
+    <div class="discovery-grid" id="new-grid"></div>
+  </div>
+</section>
+
 <section class="section" id="shop" tabindex="-1">
   <div class="wrap">
     <div class="section-head">
@@ -1269,6 +1340,7 @@
       </div>
       <div class="product-dialog-copy">
         <div class="modal-badges" id="product-dialog-badges"></div>
+        <div class="product-brand" id="product-dialog-brand"></div>
         <div class="product-category" id="product-dialog-category"></div>
         <h2 id="product-dialog-title"></h2>
         <p class="full-desc" id="product-dialog-description"></p>
@@ -1279,6 +1351,11 @@
         <div class="modal-actions">
           <button class="btn ghost modal-enquiry" id="product-dialog-enquiry" type="button">Add to enquiry</button>
           <a class="btn modal-order" id="product-dialog-order" href="#" target="_blank" rel="noopener">Order on WhatsApp</a>
+          <button class="btn share-btn" id="product-dialog-share" type="button">Share product</button>
+        </div>
+        <div class="related-products" id="related-products" hidden>
+          <h3>You may also like</h3>
+          <div class="related-grid" id="related-grid"></div>
         </div>
       </div>
     </div>
@@ -1361,6 +1438,10 @@
                 <select id="product-category" required></select>
               </div>
               <div class="form-field">
+                <label for="product-brand">Brand <span style="font-weight:500;color:var(--muted);">(optional)</span></label>
+                <input id="product-brand" maxlength="60" placeholder="e.g. GZOM, Airette, LIGUI">
+              </div>
+              <div class="form-field">
                 <label for="product-availability">Availability</label>
                 <select id="product-availability">
                   <option value="in-stock">In stock</option>
@@ -1391,6 +1472,7 @@
                 <div class="image-preview" id="product-image-preview">No image selected</div>
               </div>
               <div class="form-field full">
+                <div class="image-manager-note"><strong>Photo manager:</strong> the large preview is the cover image. Use “Make cover” on any additional photo, or move photos left/right to control gallery order.</div>
                 <div class="gallery-admin" id="product-gallery-admin"></div>
               </div>
               <div class="form-field full">
@@ -1409,6 +1491,24 @@
         </aside>
 
         <div class="admin-main">
+          <section class="admin-dashboard" id="admin-dashboard" aria-label="Catalog overview">
+            <div class="admin-stat"><b id="dash-total">0</b><span>Active products</span></div>
+            <div class="admin-stat"><b id="dash-visible">0</b><span>Visible</span></div>
+            <div class="admin-stat"><b id="dash-hidden">0</b><span>Hidden</span></div>
+            <div class="admin-stat"><b id="dash-stock">0</b><span>Out of stock</span></div>
+            <div class="admin-stat"><b id="dash-categories">0</b><span>Categories</span></div>
+            <button class="admin-stat" id="dash-archived-card" type="button"><b id="dash-archived">0</b><span>Archived</span></button>
+          </section>
+          <div class="admin-catalog-tools">
+            <label class="admin-search">
+              <span class="sr-only">Search products in admin</span>
+              <input id="admin-product-search" type="search" placeholder="Search products, brand or category…" autocomplete="off">
+            </label>
+            <div class="admin-view-tabs" aria-label="Product view">
+              <button class="admin-view-tab" id="admin-view-active" type="button" aria-pressed="true">Active</button>
+              <button class="admin-view-tab" id="admin-view-archived" type="button" aria-pressed="false">Archived</button>
+            </div>
+          </div>
           <div class="admin-list-head">
             <div>
               <h3>Products</h3>
@@ -1615,6 +1715,7 @@
         name: name,
         whatsappName: cleanText(product.whatsappName, name, 120),
         category: cleanText(product.category, 'Other', 50),
+        brand: cleanText(product.brand, '', 60),
         description: cleanText(product.description, '', 700),
         image: safeImageSource(product.image),
         alt: cleanText(product.alt, name, 150),
@@ -1624,6 +1725,7 @@
         enabled: product.enabled !== false,
         featured: product.featured === true,
         isNew: product.isNew === true,
+        archived: product.archived === true,
         order: Number.isFinite(numericOrder) ? numericOrder : index,
         createdAt: cleanText(product.createdAt, new Date().toISOString(), 50),
         updatedAt: cleanText(product.updatedAt, new Date().toISOString(), 50)
@@ -1676,6 +1778,7 @@
         name: row.name,
         whatsappName: row.whatsapp_name,
         category: row.category,
+        brand: row.brand,
         description: row.description,
         image: row.image,
         alt: row.alt,
@@ -1685,6 +1788,7 @@
         enabled: row.enabled,
         featured: row.featured,
         isNew: row.is_new,
+        archived: row.archived === true,
         order: row.sort_order,
         createdAt: row.created_at,
         updatedAt: row.updated_at
@@ -1697,6 +1801,7 @@
         name: product.name,
         whatsapp_name: product.whatsappName || product.name,
         category: product.category,
+        brand: product.brand || null,
         description: product.description,
         image: product.image,
         alt: product.alt || product.name,
@@ -1708,6 +1813,7 @@
         enabled: product.enabled,
         featured: product.featured,
         is_new: product.isNew,
+        archived: product.archived === true,
         sort_order: product.order,
         created_at: product.createdAt,
         updated_at: product.updatedAt
@@ -1717,7 +1823,7 @@
     async function loadStateFromSupabase(includeHidden){
       const fallback = makeDefaultState();
       let query = supabaseClient.from('products').select('*').order('sort_order', {ascending:true});
-      if (!includeHidden) query = query.eq('enabled', true);
+      if (!includeHidden) query = query.eq('enabled', true).eq('archived', false);
       const [productsResult, categoriesResult, settingsResult] = await Promise.all([
         query,
         supabaseClient.from('categories').select('name').order('name', {ascending:true}),
@@ -1828,6 +1934,7 @@
     const galleryNext = document.getElementById('gallery-next');
     const galleryCounter = document.getElementById('gallery-counter');
     const productDialogBadges = document.getElementById('product-dialog-badges');
+    const productDialogBrand = document.getElementById('product-dialog-brand');
     const productDialogCategory = document.getElementById('product-dialog-category');
     const productDialogTitle = document.getElementById('product-dialog-title');
     const productDialogDescription = document.getElementById('product-dialog-description');
@@ -1835,6 +1942,13 @@
     const variantOptions = document.getElementById('variant-options');
     const productDialogOrder = document.getElementById('product-dialog-order');
     const productDialogEnquiry = document.getElementById('product-dialog-enquiry');
+    const productDialogShare = document.getElementById('product-dialog-share');
+    const relatedProducts = document.getElementById('related-products');
+    const relatedGrid = document.getElementById('related-grid');
+    const featuredSection = document.getElementById('featured-section');
+    const featuredGrid = document.getElementById('featured-grid');
+    const newSection = document.getElementById('new-section');
+    const newGrid = document.getElementById('new-grid');
     const productSort = document.getElementById('product-sort');
     const enquiryDialog = document.getElementById('enquiry-dialog');
     const enquiryList = document.getElementById('enquiry-list');
@@ -1856,6 +1970,7 @@
     const productNameInput = document.getElementById('product-name');
     const productWhatsappNameInput = document.getElementById('product-whatsapp-name');
     const productCategoryInput = document.getElementById('product-category');
+    const productBrandInput = document.getElementById('product-brand');
     const productAvailabilityInput = document.getElementById('product-availability');
     const productDescriptionInput = document.getElementById('product-description');
     const productVariantsInput = document.getElementById('product-variants');
@@ -1872,6 +1987,12 @@
     const saveProductButton = document.getElementById('save-product');
     const cancelEditButton = document.getElementById('cancel-edit');
     const adminProductList = document.getElementById('admin-product-list');
+    const adminProductSearch = document.getElementById('admin-product-search');
+    const adminViewActive = document.getElementById('admin-view-active');
+    const adminViewArchived = document.getElementById('admin-view-archived');
+    const dashArchivedCard = document.getElementById('dash-archived-card');
+    let adminSearchQuery = '';
+    let adminViewMode = 'active';
     const adminProductCount = document.getElementById('admin-product-count');
     const categoryList = document.getElementById('category-list');
     const categoryForm = document.getElementById('category-form');
@@ -2092,6 +2213,7 @@
         product.name,
         product.whatsappName,
         product.category,
+        product.brand,
         product.description,
         product.variants.map(function(variant){ return variant.name; }).join(' ')
       ].join(' ');
@@ -2101,9 +2223,10 @@
     function filterProducts(){
       const query = normaliseSearch(productSearch.value.trim());
       const products = sortedProducts().filter(function(product){
-        if (!product.enabled) return false;
+        if (!product.enabled || product.archived) return false;
         if (activeFilter === 'featured' && !product.featured) return false;
         if (activeFilter.indexOf('category:') === 0 && product.category !== activeFilter.slice(9)) return false;
+        if (activeFilter.indexOf('brand:') === 0 && product.brand !== activeFilter.slice(6)) return false;
         return matchesSearch(product, query);
       });
       if (activeSort === 'az') products.sort(function(a,b){ return a.name.localeCompare(b.name); });
@@ -2124,14 +2247,15 @@
     }
 
     function renderFilters(){
-      const enabled = state.products.filter(function(product){ return product.enabled; });
+      const enabled = state.products.filter(function(product){ return product.enabled && !product.archived; });
       const usedCategories = state.categories.filter(function(category){
         return enabled.some(function(product){ return product.category === category; });
       });
       const featuredCount = enabled.filter(function(product){ return product.featured; }).length;
+      const usedBrands = Array.from(new Set(enabled.map(function(product){ return product.brand; }).filter(Boolean))).sort(function(a,b){ return a.localeCompare(b); });
       const allowedFilters = ['all'].concat(featuredCount ? ['featured'] : []).concat(usedCategories.map(function(category){
         return 'category:' + category;
-      }));
+      })).concat(usedBrands.map(function(brand){ return 'brand:' + brand; }));
       if (allowedFilters.indexOf(activeFilter) < 0) activeFilter = 'all';
 
       categoryFilters.replaceChildren();
@@ -2140,6 +2264,12 @@
       usedCategories.forEach(function(category){
         const count = enabled.filter(function(product){ return product.category === category; }).length;
         categoryFilters.appendChild(filterButton('category:' + category, category, count));
+      });
+      usedBrands.forEach(function(brand){
+        const count = enabled.filter(function(product){ return product.brand === brand; }).length;
+        const chip = filterButton('brand:' + brand, brand, count);
+        chip.classList.add('brand-chip');
+        categoryFilters.appendChild(chip);
       });
     }
 
@@ -2167,6 +2297,12 @@
 
       const meta = document.createElement('div');
       meta.className = 'product-meta';
+      if (product.brand) {
+        const brand = document.createElement('span');
+        brand.className = 'product-brand';
+        brand.textContent = product.brand;
+        meta.appendChild(brand);
+      }
       const category = document.createElement('span');
       category.className = 'product-category';
       category.textContent = product.category;
@@ -2238,6 +2374,23 @@
         oldButton.replaceWith(link);
       }
       return promo;
+    }
+
+    function createMiniProduct(product){
+      const card=document.createElement('button'); card.type='button'; card.className='mini-product'; card.setAttribute('aria-label','View '+product.name);
+      const media=document.createElement('div'); media.className='mini-product-media'; const img=document.createElement('img'); setImage(img,product.image,product.alt||product.name); media.appendChild(img); card.appendChild(media);
+      const copy=document.createElement('div'); copy.className='mini-product-copy'; if(product.brand){const b=document.createElement('div');b.className='mini-product-brand';b.textContent=product.brand;copy.appendChild(b);}
+      const h=document.createElement('h3');h.textContent=product.name;copy.appendChild(h);card.appendChild(copy);card.addEventListener('click',function(){openProduct(product.id);});return card;
+    }
+
+    function renderDiscovery(){
+      const enabled=state.products.filter(function(p){return p.enabled && !p.archived;});
+      const featured=enabled.filter(function(p){return p.featured;}).slice(0,8);
+      const newest=enabled.filter(function(p){return p.isNew;}).sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''));}).slice(0,8);
+      featuredGrid.replaceChildren(); newGrid.replaceChildren();
+      featured.forEach(function(p){featuredGrid.appendChild(createMiniProduct(p));});
+      newest.forEach(function(p){newGrid.appendChild(createMiniProduct(p));});
+      featuredSection.hidden=!featured.length; newSection.hidden=!newest.length;
     }
 
     function renderProducts(){
@@ -2354,6 +2507,28 @@
       renderModalGallery(0);
     }
 
+    function renderRelatedProducts(product){
+      relatedGrid.replaceChildren();
+      const related=state.products.filter(function(item){
+        if(!item.enabled||item.archived||item.id===product.id)return false;
+        return (product.brand && item.brand===product.brand) || item.category===product.category;
+      }).sort(function(a,b){
+        const ab=product.brand && a.brand===product.brand ? 1:0; const bb=product.brand && b.brand===product.brand ? 1:0; return bb-ab || Number(b.featured)-Number(a.featured) || a.order-b.order;
+      }).slice(0,3);
+      related.forEach(function(item){const b=document.createElement('button');b.type='button';b.className='related-card';const img=document.createElement('img');setImage(img,item.image,item.alt||item.name);b.appendChild(img);const t=document.createElement('span');t.textContent=item.name;b.appendChild(t);b.addEventListener('click',function(){closeDialog(productDialog);window.setTimeout(function(){openProduct(item.id);},60);});relatedGrid.appendChild(b);});
+      relatedProducts.hidden=!related.length;
+    }
+
+    async function shareCurrentProduct(){
+      const product=state.products.find(function(item){return item.id===currentProductId;}); if(!product)return;
+      const url=productLink(product); const data={title:product.name,text:'Check out '+product.name+' from Maxcare Beauty & Personal Care',url:url};
+      try{
+        if(navigator.share){await navigator.share(data);return;}
+        if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(url);showToast('Product link copied.');return;}
+        window.prompt('Copy this product link:',url);
+      }catch(error){if(error&&error.name!=='AbortError')showToast('Could not share this product.',true);}
+    }
+
     function openProduct(productId){
       const product = state.products.find(function(item){ return item.id === productId && item.enabled; });
       if (!product) return;
@@ -2361,6 +2536,8 @@
       setupModalGallery(product);
       productDialogBadges.replaceChildren();
       appendProductBadges(productDialogBadges, product, true);
+      productDialogBrand.textContent = product.brand || '';
+      productDialogBrand.hidden = !product.brand;
       productDialogCategory.textContent = product.category;
       productDialogTitle.textContent = product.name;
       productDialogDescription.textContent = product.description;
@@ -2392,6 +2569,7 @@
         variantOptions.appendChild(wrapper);
       });
 
+      renderRelatedProducts(product);
       updateModalOrder(product);
       showDialog(productDialog);
       window.setTimeout(function(){ productDialog.querySelector('.dialog-close').focus(); }, 0);
@@ -2399,6 +2577,7 @@
 
     function commit(message){
       renderProducts();
+      renderDiscovery();
       updateGenericWhatsAppLinks();
       if (!adminApp.hidden) renderAdmin();
       syncQueue = syncQueue.then(function(){
@@ -2462,7 +2641,7 @@
 
     function createAdminProduct(product, index, total){
       const row = document.createElement('article');
-      row.className = 'admin-product' + (product.enabled ? '' : ' is-disabled');
+      row.className = 'admin-product' + (product.enabled ? '' : ' is-disabled') + (product.archived ? ' is-archived' : '');
       const image = document.createElement('img');
       image.className = 'admin-thumb';
       setImage(image, product.image, product.alt || product.name);
@@ -2474,7 +2653,7 @@
       info.appendChild(title);
       const meta = document.createElement('div');
       meta.className = 'admin-product-meta';
-      [product.category, statusLabel(product.availability), product.enabled ? 'Visible' : 'Hidden', ((product.gallery || []).length + 1) + (((product.gallery || []).length + 1) === 1 ? ' photo' : ' photos')].forEach(function(text){
+      [product.category, statusLabel(product.availability), product.archived ? 'Archived' : (product.enabled ? 'Visible' : 'Hidden'), ((product.gallery || []).length + 1) + (((product.gallery || []).length + 1) === 1 ? ' photo' : ' photos')].forEach(function(text){
         const span = document.createElement('span');
         span.textContent = text;
         meta.appendChild(span);
@@ -2494,21 +2673,30 @@
 
       const actions = document.createElement('div');
       actions.className = 'admin-product-actions';
-      const edit = actionButton('Edit', 'edit', product.id);
-      edit.setAttribute('aria-label', 'Edit ' + product.name);
-      actions.appendChild(edit);
-      const up = actionButton('Up', 'up', product.id, index === 0);
-      up.setAttribute('aria-label', 'Move ' + product.name + ' up');
-      actions.appendChild(up);
-      const down = actionButton('Down', 'down', product.id, index === total - 1);
-      down.setAttribute('aria-label', 'Move ' + product.name + ' down');
-      actions.appendChild(down);
-      const toggle = actionButton(product.enabled ? 'Hide' : 'Show', 'toggle', product.id);
-      toggle.setAttribute('aria-label', (product.enabled ? 'Hide ' : 'Show ') + product.name);
-      actions.appendChild(toggle);
-      const remove = actionButton('Delete', 'delete', product.id, false, 'danger');
-      remove.setAttribute('aria-label', 'Delete ' + product.name);
-      actions.appendChild(remove);
+      if (product.archived) {
+        const restore = actionButton('Restore', 'restore', product.id);
+        restore.setAttribute('aria-label', 'Restore ' + product.name);
+        actions.appendChild(restore);
+        const remove = actionButton('Delete permanently', 'delete-permanent', product.id, false, 'danger');
+        remove.setAttribute('aria-label', 'Permanently delete ' + product.name);
+        actions.appendChild(remove);
+      } else {
+        const edit = actionButton('Edit', 'edit', product.id);
+        edit.setAttribute('aria-label', 'Edit ' + product.name);
+        actions.appendChild(edit);
+        const up = actionButton('Up', 'up', product.id, index === 0);
+        up.setAttribute('aria-label', 'Move ' + product.name + ' up');
+        actions.appendChild(up);
+        const down = actionButton('Down', 'down', product.id, index === total - 1);
+        down.setAttribute('aria-label', 'Move ' + product.name + ' down');
+        actions.appendChild(down);
+        const toggle = actionButton(product.enabled ? 'Hide' : 'Show', 'toggle', product.id);
+        toggle.setAttribute('aria-label', (product.enabled ? 'Hide ' : 'Show ') + product.name);
+        actions.appendChild(toggle);
+        const archive = actionButton('Archive', 'archive', product.id, false, 'danger');
+        archive.setAttribute('aria-label', 'Archive ' + product.name);
+        actions.appendChild(archive);
+      }
       row.appendChild(actions);
       return row;
     }
@@ -2527,20 +2715,44 @@
       if (target) target.focus();
     }
 
+    function adminMatchesProduct(product){
+      const q = normaliseSearch(adminSearchQuery);
+      if (!q) return true;
+      return normaliseSearch([product.name, product.brand, product.category, product.description].join(' ')).includes(q);
+    }
+
+    function renderAdminDashboard(){
+      const active = state.products.filter(function(p){ return !p.archived; });
+      const archived = state.products.filter(function(p){ return p.archived; });
+      document.getElementById('dash-total').textContent = String(active.length);
+      document.getElementById('dash-visible').textContent = String(active.filter(function(p){ return p.enabled; }).length);
+      document.getElementById('dash-hidden').textContent = String(active.filter(function(p){ return !p.enabled; }).length);
+      document.getElementById('dash-stock').textContent = String(active.filter(function(p){ return p.availability === 'out-of-stock'; }).length);
+      document.getElementById('dash-categories').textContent = String(state.categories.length);
+      document.getElementById('dash-archived').textContent = String(archived.length);
+      adminViewActive.setAttribute('aria-pressed', String(adminViewMode === 'active'));
+      adminViewArchived.setAttribute('aria-pressed', String(adminViewMode === 'archived'));
+    }
+
     function renderAdminProducts(){
-      const products = sortedProducts();
+      let products = sortedProducts().filter(function(product){
+        return adminViewMode === 'archived' ? product.archived : !product.archived;
+      }).filter(adminMatchesProduct);
       adminProductList.replaceChildren();
-      adminProductCount.textContent = products.length + (products.length === 1 ? ' product' : ' products') + ' total';
+      const label = adminViewMode === 'archived' ? ' archived' : '';
+      adminProductCount.textContent = products.length + (products.length === 1 ? ' product' : ' products') + label + (adminSearchQuery ? ' matching search' : '');
       if (!products.length) {
         const empty = document.createElement('div');
         empty.className = 'admin-empty';
-        empty.textContent = 'No products yet. Add the first product using the form.';
+        empty.textContent = adminSearchQuery ? 'No products match this admin search.' : (adminViewMode === 'archived' ? 'No archived products.' : 'No active products yet. Add the first product using the form.');
         adminProductList.appendChild(empty);
+        renderAdminDashboard();
         return;
       }
       products.forEach(function(product, index){
         adminProductList.appendChild(createAdminProduct(product, index, products.length));
       });
+      renderAdminDashboard();
     }
 
     function renderCategoryOptions(preferred){
@@ -2639,11 +2851,12 @@
           const actions = document.createElement('div');
           actions.className = 'gallery-admin-actions';
           if (index > 0) {
-            const up = document.createElement('button'); up.type='button'; up.className='icon-btn'; up.textContent='Up'; up.dataset.galleryAction='up'; up.dataset.galleryIndex=String(index); actions.appendChild(up);
+            const up = document.createElement('button'); up.type='button'; up.className='icon-btn'; up.textContent='←'; up.title='Move photo left'; up.dataset.galleryAction='up'; up.dataset.galleryIndex=String(index); actions.appendChild(up);
           }
           if (index < items.length - 1) {
-            const down = document.createElement('button'); down.type='button'; down.className='icon-btn'; down.textContent='Down'; down.dataset.galleryAction='down'; down.dataset.galleryIndex=String(index); actions.appendChild(down);
+            const down = document.createElement('button'); down.type='button'; down.className='icon-btn'; down.textContent='→'; down.title='Move photo right'; down.dataset.galleryAction='down'; down.dataset.galleryIndex=String(index); actions.appendChild(down);
           }
+          const cover = document.createElement('button'); cover.type='button'; cover.className='icon-btn cover-choice'; cover.textContent='Make cover'; cover.dataset.galleryAction='cover'; cover.dataset.galleryIndex=String(index); actions.appendChild(cover);
           const remove = document.createElement('button'); remove.type='button'; remove.className='icon-btn danger'; remove.textContent='Remove'; remove.dataset.galleryAction='remove'; remove.dataset.galleryIndex=String(index); actions.appendChild(remove);
           row.appendChild(actions);
           productGalleryAdmin.appendChild(row);
@@ -2735,6 +2948,7 @@
       productWhatsappNameInput.value = product.whatsappName === product.name ? '' : product.whatsappName;
       renderCategoryOptions(product.category);
       productCategoryInput.value = product.category;
+      if (productBrandInput) productBrandInput.value = product.brand || '';
       productAvailabilityInput.value = product.availability;
       productDescriptionInput.value = product.description;
       productVariantsInput.value = variantsToInput(product.variants);
@@ -2929,6 +3143,8 @@
       renderModalGallery(modalGalleryIndex + (delta < 0 ? 1 : -1));
     }, {passive:true});
 
+    productDialogShare.addEventListener('click', shareCurrentProduct);
+
     productDialogEnquiry.addEventListener('click', function(){
       const product = state.products.find(function(item){ return item.id === currentProductId; });
       if (!product) return;
@@ -3102,6 +3318,30 @@
       const index = Number(button.dataset.galleryIndex);
       if (!Number.isInteger(index) || index < 0 || index >= items.length) return;
       const action = button.dataset.galleryAction;
+      if (action === 'cover') {
+        const selected = items.splice(index, 1)[0];
+        const oldCoverUrl = uploadedImage ? '' : safeImageSource(productImageUrlInput.value.trim() || editingImage);
+        const oldCoverPending = uploadedImage;
+        if (oldCoverPending) {
+          items.unshift({kind:'pending', value:{dataUrl:oldCoverPending, fileName:'Previous cover'}});
+        } else if (oldCoverUrl && oldCoverUrl !== PLACEHOLDER_IMAGE) {
+          items.unshift({kind:'saved', value:{id:createId(), url:oldCoverUrl, sortOrder:0}});
+        }
+        if (selected.kind === 'pending') {
+          uploadedImage = selected.value.dataUrl;
+          editingImage = '';
+          productImageUrlInput.value = '';
+          showImagePreview(uploadedImage);
+        } else {
+          uploadedImage = '';
+          editingImage = selected.value.url;
+          productImageUrlInput.value = '';
+          showImagePreview(editingImage);
+        }
+        applyCombinedGalleryItems(items);
+        showToast('Cover image updated. Save the product to publish it.');
+        return;
+      }
       if (action === 'remove') items.splice(index, 1);
       if (action === 'up' && index > 0) { const item = items.splice(index,1)[0]; items.splice(index-1,0,item); }
       if (action === 'down' && index < items.length-1) { const item = items.splice(index,1)[0]; items.splice(index+1,0,item); }
@@ -3138,6 +3378,7 @@
         name: name,
         whatsappName: cleanText(productWhatsappNameInput.value, name, 120),
         category: productCategoryInput.value || state.categories[0] || 'Other',
+        brand: cleanText(productBrandInput ? productBrandInput.value : '', '', 60),
         description: description,
         image: safeImageSource(imageUrl || editingImage || PLACEHOLDER_IMAGE),
         alt: name,
@@ -3147,6 +3388,7 @@
         enabled: productEnabledInput.checked,
         featured: productFeaturedInput.checked,
         isNew: productNewInput.checked,
+        archived: existing ? existing.archived === true : false,
         order: existing ? existing.order : state.products.length,
         createdAt: existing ? existing.createdAt : now,
         updatedAt: now
@@ -3212,8 +3454,8 @@
         }
 
         // Clean up images that were replaced only after the new data is safely saved.
-        if (previousImage && product.image !== previousImage) await removeStoredImage(previousImage);
         const keptGalleryUrls = new Set((product.gallery || []).map(function(item){ return item.url; }));
+        if (previousImage && product.image !== previousImage && !keptGalleryUrls.has(previousImage)) await removeStoredImage(previousImage);
         for (const oldItem of previousGallery) {
           if (!keptGalleryUrls.has(oldItem.url)) await removeStoredImage(oldItem.url);
         }
@@ -3264,20 +3506,43 @@
         focusAdminAction(productId, 'toggle');
         return;
       }
-      if (action === 'delete') {
-        const productsBeforeDelete = sortedProducts();
-        const deleteIndex = productsBeforeDelete.findIndex(function(item){ return item.id === productId; });
-        const fallbackProduct = productsBeforeDelete[deleteIndex + 1] || productsBeforeDelete[deleteIndex - 1];
-        if (!window.confirm('Delete "' + product.name + '"? This cannot be undone unless you have an export backup.')) return;
+      if (action === 'archive') {
+        if (!window.confirm('Archive "' + product.name + '"? It will disappear from the public shop but can be restored anytime.')) return;
+        product.archived = true;
+        product.enabled = false;
+        product.updatedAt = new Date().toISOString();
+        if (productIdInput.value === productId) resetProductForm();
+        await commit('Product archived.');
+        return;
+      }
+      if (action === 'restore') {
+        product.archived = false;
+        product.enabled = true;
+        product.updatedAt = new Date().toISOString();
+        await commit('Product restored and visible in the shop.');
+        return;
+      }
+      if (action === 'delete-permanent') {
+        if (!window.confirm('Permanently delete "' + product.name + '" and its stored images? This cannot be undone.')) return;
         state.products = state.products.filter(function(item){ return item.id !== productId; });
         reindexProducts(sortedProducts());
-        if (productIdInput.value === productId) resetProductForm();
-        await commit('Product deleted.');
+        await commit('Product permanently deleted.');
         await removeStoredImage(product.image);
         for (const galleryItem of (product.gallery || [])) await removeStoredImage(galleryItem.url);
-        focusAdminAction(fallbackProduct && fallbackProduct.id, 'edit');
       }
     });
+
+    adminProductSearch.addEventListener('input', function(){
+      adminSearchQuery = adminProductSearch.value.trim();
+      renderAdminProducts();
+    });
+    function setAdminView(mode){
+      adminViewMode = mode === 'archived' ? 'archived' : 'active';
+      renderAdminProducts();
+    }
+    adminViewActive.addEventListener('click', function(){ setAdminView('active'); });
+    adminViewArchived.addEventListener('click', function(){ setAdminView('archived'); });
+    dashArchivedCard.addEventListener('click', function(){ setAdminView('archived'); adminProductSearch.focus(); });
 
     categoryForm.addEventListener('submit', function(event){
       event.preventDefault();
@@ -3399,6 +3664,7 @@
       updateGenericWhatsAppLinks();
       loadEnquiry();
       renderProducts();
+      renderDiscovery();
       renderEnquiry();
 
       const linkedProductId = new URL(window.location.href).searchParams.get('product');
