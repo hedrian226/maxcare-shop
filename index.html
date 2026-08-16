@@ -616,6 +616,9 @@
     .admin-topbar{padding:16px 60px 16px 18px;flex:none;}
     .admin-dialog .dialog-close{position:fixed;}
     .admin-bottombar{padding:12px 18px calc(12px + env(safe-area-inset-bottom));flex:none;}
+  }
+  /* Stack the product modal on tablets too — 760px alone misses iPad-class devices (768–912px) */
+  @media (max-width:920px){
     .product-dialog{width:calc(100vw - 20px);}
     .product-dialog-grid{grid-template-columns:1fr;max-height:calc(100dvh - 20px);overflow:auto;}
     .product-dialog-media{min-height:270px;padding:38px;border-radius:25px 25px 0 0;}
@@ -762,7 +765,7 @@
   .gallery-upload-status.has-files{color:var(--primary-dark);}
   .gallery-upload-status.has-files::before{content:"✓";width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--blush);color:var(--primary);font-weight:900;flex:none;}
   @media(max-width:600px){.gallery-admin{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.gallery-admin-item{padding:6px}.gallery-admin-actions{grid-template-columns:1fr}.gallery-admin-actions button{min-height:32px}}
-  @media(max-width:760px){
+  @media(max-width:920px){
     .product-gallery-stage{min-height:250px}.gallery-nav{width:38px;height:38px}.gallery-thumb{flex-basis:54px;width:54px;height:54px}
   }
 
@@ -786,7 +789,7 @@
     object-position:center;
     margin:0 auto;
   }
-  @media (max-width:760px){
+  @media (max-width:920px){
     .product-dialog-media{padding:18px 12px 14px;gap:10px;}
     .product-gallery-stage{
       width:100%;
