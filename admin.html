@@ -1896,20 +1896,24 @@
 
     async function persistProductFlags(product){
       await requireAdminSession();
-      const result = await supabaseClient.from('products')
-        .update({
-          featured: product.featured === true,
-          is_new: product.isNew === true,
-          updated_at: product.updatedAt || new Date().toISOString()
-        })
-        .eq('id', product.id)
-        .select('id,featured,is_new')
-        .single();
+      // Save these two editorial flags through a tiny database RPC. This avoids
+      // any full-row upsert or stale in-memory catalog state from resetting them.
+      const result = await supabaseClient.rpc('set_product_flags', {
+        p_product_id: product.id,
+        p_featured: product.featured === true,
+        p_is_new: product.isNew === true
+      });
       if (result.error) throw result.error;
-      if (!result.data || Boolean(result.data.featured) !== Boolean(product.featured) || Boolean(result.data.is_new) !== Boolean(product.isNew)) {
+
+      const verify = await supabaseClient.from('products')
+        .select('id,featured,is_new')
+        .eq('id', product.id)
+        .single();
+      if (verify.error) throw verify.error;
+      if (!verify.data || Boolean(verify.data.featured) !== Boolean(product.featured) || Boolean(verify.data.is_new) !== Boolean(product.isNew)) {
         throw new Error('Supabase did not save the Featured/New flags correctly.');
       }
-      return result.data;
+      return verify.data;
     }
 
     async function syncCatalogToSupabase(){
