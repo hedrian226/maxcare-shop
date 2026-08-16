@@ -1895,24 +1895,29 @@
 
     async function persistProductFlags(product){
       await requireAdminSession();
-      // Save these two editorial flags through a tiny database RPC. This avoids
-      // any full-row upsert or stale in-memory catalog state from resetting them.
-      const result = await supabaseClient.rpc('set_product_flags', {
-        p_product_id: product.id,
-        p_featured: product.featured === true,
-        p_is_new: product.isNew === true
-      });
+
+      // Save Featured/New directly on the product row.
+      // This runs AFTER the normal product upsert and is also called again at
+      // the very end of the save flow, so no stale catalog sync can reset them.
+      const result = await supabaseClient.from('products')
+        .update({
+          featured: product.featured === true,
+          is_new: product.isNew === true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', product.id)
+        .select('id,featured,is_new')
+        .single();
+
       if (result.error) throw result.error;
 
-      const verify = await supabaseClient.from('products')
-        .select('id,featured,is_new')
-        .eq('id', product.id)
-        .single();
-      if (verify.error) throw verify.error;
-      if (!verify.data || Boolean(verify.data.featured) !== Boolean(product.featured) || Boolean(verify.data.is_new) !== Boolean(product.isNew)) {
+      const savedFeatured = result.data && result.data.featured === true;
+      const savedNew = result.data && result.data.is_new === true;
+      if (savedFeatured !== (product.featured === true) || savedNew !== (product.isNew === true)) {
         throw new Error('Supabase did not save the Featured/New flags correctly.');
       }
-      return verify.data;
+
+      return result.data;
     }
 
     async function syncCatalogToSupabase(){
@@ -3501,6 +3506,11 @@
         for (const oldItem of previousGallery) {
           if (!keptGalleryUrls.has(oldItem.url)) await removeStoredImage(oldItem.url);
         }
+
+        // IMPORTANT: write the editorial flags one final time AFTER every image
+        // and catalog save has finished. This is the last database write for
+        // this product before reloading, so New/Featured cannot be reverted.
+        await persistProductFlags(product);
 
         // Reload once from Supabase so the admin immediately reflects the exact saved values.
         await loadStateFromSupabase(true);
