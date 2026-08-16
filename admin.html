@@ -1796,6 +1796,8 @@
     }
 
     function productToRow(product){
+      // IMPORTANT: featured/is_new are excluded here on purpose.
+      // Only persistProductFlags() is allowed to update those editorial flags.
       return {
         id: product.id,
         name: product.name,
@@ -1811,8 +1813,6 @@
         variants: product.variants || [],
         availability: product.availability,
         enabled: product.enabled,
-        featured: product.featured,
-        is_new: product.isNew,
         archived: product.archived === true,
         sort_order: product.order,
         created_at: product.createdAt,
@@ -1887,11 +1887,10 @@
         .select('*')
         .single();
       if (result.error) throw result.error;
-      const saved = productFromRow(result.data, product.order);
-      if (Boolean(saved.isNew) !== Boolean(product.isNew) || Boolean(saved.featured) !== Boolean(product.featured)) {
-        throw new Error('Supabase did not keep the New/Featured setting.');
-      }
-      return saved;
+      // Featured/New are intentionally NOT written by the full product upsert.
+      // They are stored only by persistProductFlags() so another catalog sync cannot
+      // accidentally overwrite them with stale checkbox values.
+      return productFromRow(result.data, product.order);
     }
 
     async function persistProductFlags(product){
