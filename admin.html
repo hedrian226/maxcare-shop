@@ -1878,6 +1878,22 @@
       return session;
     }
 
+
+    async function saveSingleProductToSupabase(product){
+      await requireAdminSession();
+      const row = productToRow(product);
+      const result = await supabaseClient.from('products')
+        .upsert(row, {onConflict:'id'})
+        .select('*')
+        .single();
+      if (result.error) throw result.error;
+      const saved = productFromRow(result.data, product.order);
+      if (Boolean(saved.isNew) !== Boolean(product.isNew) || Boolean(saved.featured) !== Boolean(product.featured)) {
+        throw new Error('Supabase did not keep the New/Featured setting.');
+      }
+      return saved;
+    }
+
     async function persistProductFlags(product){
       await requireAdminSession();
       const result = await supabaseClient.from('products')
@@ -3426,9 +3442,9 @@
         renderProducts();
         renderAdmin();
         saveProductButton.textContent = 'Saving product...';
-        await syncCatalogToSupabase();
-        // Save and verify the two storefront discovery flags separately. This prevents
-        // a later catalog/image sync from silently reverting Featured or New.
+        // Save only the product being edited/created first. This avoids another product
+        // in the catalog overwriting the current New/Featured checkbox state.
+        await saveSingleProductToSupabase(product);
         await persistProductFlags(product);
 
         const preparedPhotos = [];
@@ -3445,7 +3461,7 @@
           const coverUrl = await uploadProductImage(productId, preparedCover);
           product.image = coverUrl;
           product.updatedAt = new Date().toISOString();
-          await syncCatalogToSupabase();
+          await saveSingleProductToSupabase(product);
           await persistProductFlags(product);
           renderProducts();
           renderAdmin();
@@ -3469,7 +3485,7 @@
             product.updatedAt = new Date().toISOString();
 
             // Save after each successful upload so partial progress is never lost.
-            await syncCatalogToSupabase();
+            await saveSingleProductToSupabase(product);
             await persistProductFlags(product);
             renderProducts();
             renderAdmin();
