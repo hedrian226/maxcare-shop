@@ -1398,6 +1398,79 @@ button,a,input,select,textarea{touch-action:manipulation;}
   .hero-sub{font-size:.96rem !important;line-height:1.7 !important;}
 }
 </style>
+
+<style id="maxcare-mobile-performance-fix">
+/* Mobile performance fix: keep desktop motion, remove costly continuous animation on phones/tablets. */
+@media (max-width: 900px){
+  html{scroll-behavior:auto !important;}
+  body,
+  main::before,
+  .hero::before,
+  .hero::after,
+  #new-arrivals::before,
+  .new-arrivals-section::before,
+  #products::before,
+  .catalog-section::before,
+  .section.catalog::before,
+  footer::before,
+  .pedestal,
+  .float-wa{
+    animation:none !important;
+  }
+
+  /* Expensive blur/saturation effects can stutter while scrolling on mobile browsers. */
+  header.site{
+    -webkit-backdrop-filter:none !important;
+    backdrop-filter:none !important;
+    background:rgba(255,250,252,.98) !important;
+  }
+  dialog::backdrop{
+    -webkit-backdrop-filter:none !important;
+    backdrop-filter:none !important;
+  }
+
+  /* Avoid unnecessary GPU layers and animated transforms during touch scrolling. */
+  main::before,
+  .hero::before,
+  .hero::after,
+  #products::before,
+  .catalog-section::before,
+  .section.catalog::before{
+    will-change:auto !important;
+    transform:none !important;
+  }
+  .pedestal{transform:none !important;}
+  .card:hover,
+  .mini-product:hover,
+  .btn:hover,
+  .card:hover .card-media-button img,
+  .card-media-button:hover img{
+    transform:none !important;
+  }
+  .card-media-button img{transition:none !important;}
+  header.site,
+  header.site .nav,
+  header.site .brand img{
+    transition:none !important;
+  }
+
+  /* Keep the background design, but make it static. */
+  body{background-position:center top !important;}
+  main::before,
+  #products::before,
+  .catalog-section::before,
+  .section.catalog::before,
+  footer::before{
+    background-position:center !important;
+  }
+
+  /* Static WhatsApp button on mobile to avoid constant shadow repaints. */
+  .float-wa{
+    box-shadow:0 10px 22px -10px rgba(37,211,102,.55) !important;
+  }
+}
+</style>
+
 </head>
 <body class="public-storefront">
 <a class="skip-link" href="#shop">Skip to products</a>
