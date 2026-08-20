@@ -1069,6 +1069,16 @@
   @media (max-width:760px){
     body.admin-route #admin-dialog{width:100vw;height:100dvh;max-width:none;max-height:none;}
   }
+
+  /* TRUSTED EMBED PRODUCT CONTENT */
+  .embed-product-wrap{width:100%;min-width:0;}
+  .embed-product-frame{width:100%;min-height:420px;border:0;border-radius:18px;background:#fff;display:block;}
+  .embed-product-note{margin:10px 0 0;color:var(--muted);font-size:.76rem;line-height:1.45;}
+  .embed-admin-box{padding:14px;border:1px solid var(--line);border-radius:14px;background:#FFF9FB;}
+  .embed-admin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .embed-admin-actions .btn{box-shadow:none;}
+  @media(max-width:760px){.embed-product-frame{min-height:520px;border-radius:12px;}}
+
 </style>
 </head>
 <body class="admin-route">
@@ -1449,6 +1459,21 @@
                   <option value="out-of-stock">Out of stock</option>
                 </select>
               </div>
+              <div class="form-field full embed-admin-box">
+                <label for="product-content-type">Detail content</label>
+                <select id="product-content-type">
+                  <option value="standard">Standard product gallery + description</option>
+                  <option value="facebook-embed">Facebook post embed</option>
+                </select>
+                <div id="product-embed-fields" hidden style="margin-top:12px;">
+                  <label for="product-embed-code">Facebook embed code</label>
+                  <textarea id="product-embed-code" rows="5" placeholder="Paste the Facebook &lt;iframe ...&gt;&lt;/iframe&gt; code here"></textarea>
+                  <span class="form-help">Only official facebook.com/plugins/post embeds are accepted. The code is sanitized and only the trusted Facebook URL is stored.</span>
+                  <div class="embed-admin-actions">
+                    <button class="btn ghost small" id="remove-product-embed" type="button">Remove embed content</button>
+                  </div>
+                </div>
+              </div>
               <div class="form-field full">
                 <label for="product-description">Description</label>
                 <textarea id="product-description" maxlength="700" required></textarea>
@@ -1716,6 +1741,8 @@
         whatsappName: cleanText(product.whatsappName, name, 120),
         category: cleanText(product.category, 'Other', 50),
         brand: cleanText(product.brand, '', 60),
+        contentType: product.contentType === 'facebook-embed' ? 'facebook-embed' : 'standard',
+        embedUrl: cleanText(product.embedUrl, '', 2000),
         description: cleanText(product.description, '', 700),
         image: safeImageSource(product.image),
         alt: cleanText(product.alt, name, 150),
@@ -1779,6 +1806,8 @@
         whatsappName: row.whatsapp_name,
         category: row.category,
         brand: row.brand,
+        contentType: row.content_type,
+        embedUrl: row.embed_url,
         description: row.description,
         image: row.image,
         alt: row.alt,
@@ -1804,6 +1833,8 @@
         whatsapp_name: product.whatsappName || product.name,
         category: product.category,
         brand: product.brand || null,
+        content_type: product.contentType || 'standard',
+        embed_url: product.embedUrl || null,
         description: product.description,
         image: product.image,
         alt: product.alt || product.name,
@@ -2015,6 +2046,10 @@
     const productBrandInput = document.getElementById('product-brand');
     const productAvailabilityInput = document.getElementById('product-availability');
     const productDescriptionInput = document.getElementById('product-description');
+    const productContentTypeInput = document.getElementById('product-content-type');
+    const productEmbedFields = document.getElementById('product-embed-fields');
+    const productEmbedCodeInput = document.getElementById('product-embed-code');
+    const removeProductEmbedButton = document.getElementById('remove-product-embed');
     const productVariantsInput = document.getElementById('product-variants');
     const productImageUrlInput = document.getElementById('product-image-url');
     const productImageFileInput = document.getElementById('product-image-file');
@@ -2695,7 +2730,7 @@
       info.appendChild(title);
       const meta = document.createElement('div');
       meta.className = 'admin-product-meta';
-      [product.category, statusLabel(product.availability), product.archived ? 'Archived' : (product.enabled ? 'Visible' : 'Hidden'), ((product.gallery || []).length + 1) + (((product.gallery || []).length + 1) === 1 ? ' photo' : ' photos')].forEach(function(text){
+      [product.category, product.contentType === 'facebook-embed' ? 'Facebook embed' : null, statusLabel(product.availability), product.archived ? 'Archived' : (product.enabled ? 'Visible' : 'Hidden'), ((product.gallery || []).length + 1) + (((product.gallery || []).length + 1) === 1 ? ' photo' : ' photos')].filter(Boolean).forEach(function(text){
         const span = document.createElement('span');
         span.textContent = text;
         meta.appendChild(span);
@@ -2962,6 +2997,33 @@
       saveProductButton.disabled = false;
     }
 
+
+    function extractTrustedFacebookEmbedUrl(value){
+      const raw=String(value||'').trim();
+      if(!raw)return '';
+      let candidate=raw;
+      const match=raw.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+      if(match)candidate=match[1];
+      candidate=candidate.replace(/&amp;/g,'&');
+      try{
+        const url=new URL(candidate);
+        const host=url.hostname.toLowerCase();
+        if((host==='www.facebook.com'||host==='facebook.com') && url.pathname==='/plugins/post.php') return url.toString();
+      }catch(error){}
+      return '';
+    }
+
+    function facebookEmbedCodeFromUrl(url){
+      if(!url)return '';
+      return '<iframe src="'+String(url).replace(/"/g,'&quot;')+'" width="500" height="500" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>';
+    }
+
+    function syncEmbedFields(){
+      const isEmbed=productContentTypeInput && productContentTypeInput.value==='facebook-embed';
+      if(productEmbedFields)productEmbedFields.hidden=!isEmbed;
+      if(productDescriptionInput)productDescriptionInput.required=!isEmbed;
+    }
+
     function resetProductForm(){
       cancelPendingImageProcessing();
       productForm.reset();
@@ -2973,6 +3035,9 @@
       productGalleryFilesInput.value = '';
       productEnabledInput.checked = true;
       productAvailabilityInput.value = 'in-stock';
+      if(productContentTypeInput) productContentTypeInput.value = 'standard';
+      if(productEmbedCodeInput) productEmbedCodeInput.value = '';
+      syncEmbedFields();
       productFormTitle.textContent = 'Add product';
       saveProductButton.textContent = 'Add product';
       cancelEditButton.hidden = true;
@@ -2993,6 +3058,9 @@
       if (productBrandInput) productBrandInput.value = product.brand || '';
       productAvailabilityInput.value = product.availability;
       productDescriptionInput.value = product.description;
+      if(productContentTypeInput) productContentTypeInput.value = product.contentType || 'standard';
+      if(productEmbedCodeInput) productEmbedCodeInput.value = facebookEmbedCodeFromUrl(product.embedUrl || '');
+      syncEmbedFields();
       productVariantsInput.value = variantsToInput(product.variants);
       productImageUrlInput.value = /^https?:\/\//i.test(product.image) ? product.image : '';
       productImageFileInput.value = '';
@@ -3390,6 +3458,15 @@
       applyCombinedGalleryItems(items);
     });
 
+
+    if(productContentTypeInput) productContentTypeInput.addEventListener('change', syncEmbedFields);
+    if(removeProductEmbedButton) removeProductEmbedButton.addEventListener('click', function(){
+      if(productEmbedCodeInput) productEmbedCodeInput.value='';
+      if(productContentTypeInput) productContentTypeInput.value='standard';
+      syncEmbedFields();
+      showToast('Embed content removed from this form. Save changes to apply.');
+    });
+
     productForm.addEventListener('submit', async function(event){
       event.preventDefault();
       if (imageProcessing) {
@@ -3398,8 +3475,14 @@
       }
       const name = cleanText(productNameInput.value, '', 120);
       const description = cleanText(productDescriptionInput.value, '', 700);
-      if (!name || !description) {
-        showToast('Add a product name and description.', true);
+      const contentType = productContentTypeInput && productContentTypeInput.value === 'facebook-embed' ? 'facebook-embed' : 'standard';
+      const embedUrl = contentType === 'facebook-embed' ? extractTrustedFacebookEmbedUrl(productEmbedCodeInput ? productEmbedCodeInput.value : '') : '';
+      if (!name || (contentType === 'standard' && !description)) {
+        showToast(contentType === 'standard' ? 'Add a product name and description.' : 'Add a product name.', true);
+        return;
+      }
+      if (contentType === 'facebook-embed' && !embedUrl) {
+        showToast('Paste a valid official Facebook post embed iframe.', true);
         return;
       }
       const imageUrl = productImageUrlInput.value.trim();
@@ -3421,6 +3504,8 @@
         whatsappName: cleanText(productWhatsappNameInput.value, name, 120),
         category: productCategoryInput.value || state.categories[0] || 'Other',
         brand: cleanText(productBrandInput ? productBrandInput.value : '', '', 60),
+        contentType: contentType,
+        embedUrl: embedUrl,
         description: description,
         image: safeImageSource(imageUrl || editingImage || PLACEHOLDER_IMAGE),
         alt: name,

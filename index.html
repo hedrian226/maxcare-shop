@@ -1095,6 +1095,16 @@
 
   /* PUBLIC STOREFRONT: admin UI is intentionally not exposed on this page. */
   body.public-storefront #admin-dialog{display:none !important;}
+
+  /* TRUSTED EMBED PRODUCT CONTENT */
+  .embed-product-wrap{width:100%;min-width:0;}
+  .embed-product-frame{width:100%;min-height:420px;border:0;border-radius:18px;background:#fff;display:block;}
+  .embed-product-note{margin:10px 0 0;color:var(--muted);font-size:.76rem;line-height:1.45;}
+  .embed-admin-box{padding:14px;border:1px solid var(--line);border-radius:14px;background:#FFF9FB;}
+  .embed-admin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .embed-admin-actions .btn{box-shadow:none;}
+  @media(max-width:760px){.embed-product-frame{min-height:520px;border-radius:12px;}}
+
 </style>
 
 <style id="maxcare-mobile-layout-v1">
@@ -1779,6 +1789,10 @@ button,a,input,select,textarea{touch-action:manipulation;}
     <button class="dialog-close" type="button" data-close-dialog="product-dialog" aria-label="Close product details">&times;</button>
     <div class="product-dialog-grid">
       <div class="product-dialog-media">
+        <div class="embed-product-wrap" id="product-embed-wrap" hidden>
+          <iframe class="embed-product-frame" id="product-embed-frame" title="Facebook product post" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe>
+          <p class="embed-product-note">Content loaded from Facebook.</p>
+        </div>
         <div class="product-gallery-stage" id="product-gallery-stage">
           <img id="product-dialog-image" src="" alt="">
           <button class="gallery-nav prev" id="gallery-prev" type="button" aria-label="Previous image">&#8249;</button>
@@ -2146,6 +2160,8 @@ button,a,input,select,textarea{touch-action:manipulation;}
         whatsappName: cleanText(product.whatsappName, name, 120),
         category: cleanText(product.category, 'Other', 50),
         brand: cleanText(product.brand, '', 60),
+        contentType: product.contentType === 'facebook-embed' ? 'facebook-embed' : 'standard',
+        embedUrl: cleanText(product.embedUrl, '', 2000),
         description: cleanText(product.description, '', 700),
         image: safeImageSource(product.image),
         alt: cleanText(product.alt, name, 150),
@@ -2209,6 +2225,8 @@ button,a,input,select,textarea{touch-action:manipulation;}
         whatsappName: row.whatsapp_name,
         category: row.category,
         brand: row.brand,
+        contentType: row.content_type,
+        embedUrl: row.embed_url,
         description: row.description,
         image: row.image,
         alt: row.alt,
@@ -2232,6 +2250,8 @@ button,a,input,select,textarea{touch-action:manipulation;}
         whatsapp_name: product.whatsappName || product.name,
         category: product.category,
         brand: product.brand || null,
+        content_type: product.contentType || 'standard',
+        embed_url: product.embedUrl || null,
         description: product.description,
         image: product.image,
         alt: product.alt || product.name,
@@ -2358,6 +2378,8 @@ button,a,input,select,textarea{touch-action:manipulation;}
     const clearFilters = document.getElementById('clear-filters');
     const productDialog = document.getElementById('product-dialog');
     const productDialogImage = document.getElementById('product-dialog-image');
+    const productEmbedWrap = document.getElementById('product-embed-wrap');
+    const productEmbedFrame = document.getElementById('product-embed-frame');
     const productGalleryStage = document.getElementById('product-gallery-stage');
     const productGalleryThumbs = document.getElementById('product-gallery-thumbs');
     const galleryPrev = document.getElementById('gallery-prev');
@@ -2894,6 +2916,29 @@ button,a,input,select,textarea{touch-action:manipulation;}
       }
     }
 
+
+    function trustedFacebookEmbedUrl(value){
+      try{
+        const url=new URL(String(value||''));
+        const host=url.hostname.toLowerCase();
+        if((host==='www.facebook.com'||host==='facebook.com') && url.pathname==='/plugins/post.php') return url.toString();
+      }catch(error){}
+      return '';
+    }
+
+    function setProductDetailMode(product){
+      const embedUrl=product && product.contentType==='facebook-embed' ? trustedFacebookEmbedUrl(product.embedUrl) : '';
+      const usingEmbed=!!embedUrl;
+      if(productEmbedWrap) productEmbedWrap.hidden=!usingEmbed;
+      if(productGalleryStage) productGalleryStage.hidden=usingEmbed;
+      if(productGalleryThumbs) productGalleryThumbs.hidden=usingEmbed;
+      if(productEmbedFrame){
+        if(usingEmbed){ productEmbedFrame.src=embedUrl; }
+        else { productEmbedFrame.removeAttribute('src'); }
+      }
+      return usingEmbed;
+    }
+
     function productGallerySources(product){
       const sources = [product.image].concat((product.gallery || []).map(function(item){ return item.url; }));
       return sources.filter(function(source, index, all){ return source && all.indexOf(source) === index; });
@@ -2957,14 +3002,17 @@ button,a,input,select,textarea{touch-action:manipulation;}
       const product = state.products.find(function(item){ return item.id === productId && item.enabled; });
       if (!product) return;
       currentProductId = product.id;
-      setupModalGallery(product);
+      const usingEmbed = setProductDetailMode(product);
+      if (!usingEmbed) setupModalGallery(product);
+      else { modalGalleryImages=[]; productGalleryThumbs.replaceChildren(); }
       productDialogBadges.replaceChildren();
       appendProductBadges(productDialogBadges, product, true);
       productDialogBrand.textContent = product.brand || '';
       productDialogBrand.hidden = !product.brand;
       productDialogCategory.textContent = product.category;
       productDialogTitle.textContent = product.name;
-      productDialogDescription.textContent = product.description;
+      productDialogDescription.textContent = product.description || '';
+      productDialogDescription.hidden = !product.description;
       variantOptions.replaceChildren();
       variantFieldset.hidden = !product.variants.length;
 
